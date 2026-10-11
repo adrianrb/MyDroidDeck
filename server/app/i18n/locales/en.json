@@ -33,5 +33,12 @@
   "admin.new_action": "New action",
   "admin.no_actions": "No actions configured yet.",
   "error.action_exists": "An action with that key already exists.",
-  "error.required": "Fill in the required fields."
+  "error.required": "Fill in the required fields.",
+  "error.invalid_login": "Invalid username or password.",
+  "admin.username": "Username",
+  "admin.password": "Password",
+  "admin.login": "Sign in",
+  "admin.logout": "Sign out",
+  "admin.import_examples": "Import examples",
+  "admin.imported": "Example actions imported (duplicates were skipped)."
 }

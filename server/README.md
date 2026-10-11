@@ -24,7 +24,8 @@ Endpoints:
   — protected: send `Authorization: Bearer <token>` from `/pair`
 - `GET /admin/profiles`, `GET|POST /admin/profiles/…`, `GET /admin/devices`,
   `POST /admin/devices/{id}/revoke`, `GET|POST /admin/actions`,
-  `POST /admin/actions/{id}/delete` — server-rendered admin UI (not authenticated yet)
+  `POST /admin/actions/{id}/delete`, `POST /admin/actions/examples`
+  — server-rendered admin UI, **requires login** (see below)
 
 Config is overridable with `MYDROIDDECK_*` env vars (see `app/core/config.py`);
 SQLite is used by default.
@@ -34,6 +35,30 @@ SQLite is used by default.
 ```bash
 .venv/bin/pytest
 ```
+
+## Admin UI — login
+
+As páginas HTML (`/admin/…`) exigem **login** (usuário/senha). Configure em
+`server/.env` (gitignored):
+
+```bash
+MYDROIDDECK_ADMIN_USER=admin
+MYDROIDDECK_ADMIN_PASSWORD=uma-senha-forte
+MYDROIDDECK_ADMIN_SECRET_KEY=<aleatório estável>   # assina o cookie de sessão
+# MYDROIDDECK_ADMIN_SESSION_SECONDS=43200          # validade da sessão (12h)
+```
+
+Gere o segredo com:
+`python3 -c "import secrets;print(secrets.token_urlsafe(32))"`.
+
+- A sessão é um **cookie assinado** (HMAC-SHA256, `httponly`, `samesite=lax`), sem
+  store no servidor; expira conforme `MYDROIDDECK_ADMIN_SESSION_SECONDS`.
+- `GET /admin/login` mostra o formulário; `POST /admin/logout` encerra a sessão.
+- Visitas sem sessão válida são redirecionadas (HTTP 303) para o login.
+- Se os defaults (`admin`/`admin`, segredo `change-me`) não forem trocados, o
+  servidor registra um **aviso no log** ao iniciar.
+- A API REST continua usando **token por dispositivo** (`Authorization: Bearer`),
+  independente deste login.
 
 ## Ações → executáveis do Windows
 
@@ -57,6 +82,15 @@ Como o servidor roda no WSL2, o programa é iniciado via **interop do WSL**
 - As últimas execuções aparecem em `/admin/actions` (`last_run_at` / `last_status`).
 - `MYDROIDDECK_EXEC_ENGINE=dry-run` simula o lançamento (não abre programa) — usado
   pelos testes; `MYDROIDDECK_EXEC_TIMEOUT_SECONDS` limita o launcher.
+
+### Bindings de exemplo
+
+O botão **Importar exemplos** em `/admin/actions` (`POST /admin/actions/examples`)
+carrega os exemplos de **`server/actions.example.json`**, ignorando chaves que já
+existem (idempotente). Já vêm prontos: Bloco de Notas, Calculadora, Paint,
+Explorador, Gerenciador de Tarefas, **kiTTY portable**
+(`C:\Desenv\Util\kiTTY-PuTTY-auto-reconnect\kitty_portable-0.74.0.4.exe`) e dois
+modelos (OBS Studio e um `.bat`) — ajuste os caminhos desses dois na sua máquina.
 
 ## Deploy (neste host — WSL, sem systemd/Docker)
 
@@ -85,5 +119,6 @@ No app (tela de pareamento), informe `http://<ip-lan-do-windows>:8000/`
 (ex.: `http://192.168.100.7:8000/`) e o código de pareamento.
 
 > ⚠️ O admin HTML (`/admin/devices`, `/admin/actions`) mostra o código de pareamento
-> e permite **cadastrar executáveis que o servidor lança no Windows** — e **não tem
-> autenticação**. Não exponha na internet pública enquanto isso não for resolvido.
+> e permite **cadastrar executáveis que o servidor lança no Windows**. Ele **exige
+> login** (`MYDROIDDECK_ADMIN_*`), mas **não usa HTTPS** — mantenha em LAN confiável
+> e troque as credenciais padrão antes de expor.

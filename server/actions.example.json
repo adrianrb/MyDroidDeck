@@ -1,0 +1,52 @@
+{
+  "examples": [
+    {
+      "action": "bloco.notas",
+      "executable": "notepad.exe",
+      "args": "",
+      "description": "Abre o Bloco de Notas"
+    },
+    {
+      "action": "calculadora",
+      "executable": "calc.exe",
+      "args": "",
+      "description": "Abre a Calculadora"
+    },
+    {
+      "action": "paint",
+      "executable": "mspaint.exe",
+      "args": "",
+      "description": "Abre o Paint"
+    },
+    {
+      "action": "explorer",
+      "executable": "explorer.exe",
+      "args": "",
+      "description": "Abre o Explorador de Arquivos"
+    },
+    {
+      "action": "gerenciador.tarefas",
+      "executable": "taskmgr.exe",
+      "args": "",
+      "description": "Abre o Gerenciador de Tarefas"
+    },
+    {
+      "action": "kitty",
+      "executable": "C:\\Desenv\\Util\\kiTTY-PuTTY-auto-reconnect\\kitty_portable-0.74.0.4.exe",
+      "args": "",
+      "description": "Abre o terminal kiTTY portable (PuTTY com auto-reconnect)"
+    },
+    {
+      "action": "obs.gravar",
+      "executable": "C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe",
+      "args": "--startrecording --minimize-to-tray",
+      "description": "Exemplo OBS Studio: inicie a gravação (ajuste o caminho se necessário)"
+    },
+    {
+      "action": "script.exemplo",
+      "executable": "C:\\scripts\\exemplo.bat",
+      "args": "",
+      "description": "Exemplo de script .bat: ajuste o caminho para o seu"
+    }
+  ]
+}

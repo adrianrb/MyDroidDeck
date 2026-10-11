@@ -50,10 +50,11 @@ stores profiles and dispatches commands. Scaffolds for both exist and build gree
 
 ## Layout
 - `server/` — FastAPI app in `server/app/` (`api/` routers, `models/` ORM,
-  `schemas/` Pydantic, `core/security.py` token auth + `api/pairing.py`,
-  `core/executor.py` launches configured **Windows executables** for dispatched
-  actions via WSL interop, `templates/` + `static/` Jinja admin UI incl.
-  `/admin/actions`, `i18n/locales/*.json` catalogs); pytest in `server/tests/`.
+  `schemas/` Pydantic, `core/security.py` device-token auth + `api/pairing.py`,
+  `core/admin_auth.py` admin login/session, `core/executor.py` launches configured
+  **Windows executables** for dispatched actions via WSL interop, `templates/` +
+  `static/` Jinja admin UI incl. `/admin/actions`, `i18n/locales/*.json` catalogs,
+  `actions.example.json` seed bindings); pytest in `server/tests/`.
   Use the `server/.venv` virtualenv (`./.venv/bin/pytest`). Dev pairing code:
   `pair-dev` (`MYDROIDDECK_PAIRING_CODE`). Version: `server/version.txt`.
 - `app/` — Android Gradle project (Kotlin + Compose). Sources in
@@ -74,14 +75,17 @@ stores profiles and dispatches commands. Scaffolds for both exist and build gree
 - The cleartext network config is broad for LAN dev; harden before any public exposure.
 - Button actions execute **Windows executables** configured in `/admin/actions`
   (server → `powershell.exe Start-Process`, WSL interop). Only configured bindings
-  run; anything else returns `status:"unknown"`.
+  run; anything else returns `status:"unknown"`. `POST /admin/actions/examples`
+  seeds the example set from `server/actions.example.json`.
+- The admin HTML UI requires login (`MYDROIDDECK_ADMIN_USER` / `_ADMIN_PASSWORD` /
+  `_ADMIN_SECRET_KEY` in `server/.env`); the session is a signed cookie with
+  `MYDROIDDECK_ADMIN_SESSION_SECONDS` lifetime.
 
 ## Open decisions
-- `server/`: the admin HTML UI is **not authenticated yet** — device tokens protect
-  only the JSON REST API (`/profiles`, `/actions`); pairing uses a shared
-  `pairing_code` + per-device tokens. Because `/admin/actions` can register
-  Windows programs the server will launch, treat the admin UI as a trusted,
-  LAN-only surface until it gets auth.
+- `server/` auth: the admin HTML UI uses a **login + signed session cookie**
+  (`MYDROIDDECK_ADMIN_*`); the JSON REST API uses per-device bearer tokens. Neither
+  is TLS-protected yet — keep the server on a trusted LAN and set non-default admin
+  credentials in `server/.env` before exposing it.
 
 ## Assets & reusable code
 Free / permissively-licensed assets and open-source repos, with their licenses, are

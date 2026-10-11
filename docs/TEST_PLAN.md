@@ -38,6 +38,10 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | S-21 | Dispatch a configured action | Runs its Windows binding; records `last_run_at`/`last_status` | ✅ `test_actions.py` |
 | S-22 | Dispatch an unconfigured action | 200 `status:"unknown"`; nothing is executed | ✅ `test_actions.py` |
 | S-23 | Admin manages action bindings | Create via form (303), duplicate 409, delete | ✅ `test_admin.py` |
+| S-24 | Admin pages require login | Anonymous → 303 redirect to `/admin/login` | ✅ `test_admin.py` |
+| S-25 | Admin login/logout | Bad creds 401 + localized; login grants session; logout revokes | ✅ `test_admin.py` |
+| S-26 | Tampered/expired session cookie | Rejected → 303 redirect | ✅ `test_admin.py` |
+| S-27 | Import example bindings | 303; keys added once (idempotent); valid seeds | ✅ `test_admin.py`, `test_actions.py` |
 
 ## Android app (unit / instrumentation)
 | ID | Case | Expected |
@@ -70,7 +74,8 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 
 - Transport is **REST** (decided): the app `POST`s actions to `/actions`. Device
   pairing is implemented (shared `pairing_code` → per-device bearer token, S-15…S-20);
-  the admin HTML UI is not authenticated yet (open).
+  the admin HTML UI is authenticated with a login + signed session cookie
+  (S-24…S-26).
 - The admin UI is server-rendered **Jinja** (decided); its tests assert on localized
   HTML output (S-11…S-14, S-20).
 - E-01 (pair device) is implemented via the pairing code; E-03 (revoked token) is
@@ -81,3 +86,5 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
   `MYDROIDDECK_EXEC_ENGINE=dry-run`.
 - Versions are versioned **separately**: `server/version.txt` and `app/version.txt`
   are each component's single source of truth (N-02).
+- Admin example bindings live in `server/actions.example.json` and are imported from
+  the UI (S-27).

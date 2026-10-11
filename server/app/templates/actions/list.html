@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-<p><a class="button" href="/admin/actions/new">{{ t("admin.new_action") }}</a></p>
+{% if imported %}<p class="muted">{{ t("admin.imported") }}</p>{% endif %}
+<div class="toolbar">
+    <a class="button" href="/admin/actions/new">{{ t("admin.new_action") }}</a>
+    <form method="post" action="/admin/actions/examples">
+        <button type="submit">{{ t("admin.import_examples") }}</button>
+    </form>
+</div>
 {% if bindings %}
 <table>
     <thead>

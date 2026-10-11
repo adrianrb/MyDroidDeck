@@ -14,6 +14,13 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.action_examples import load_examples
+from app.core.admin_auth import (
+    COOKIE_NAME,
+    create_session_token,
+    require_admin,
+    verify_credentials,
+)
 from app.core.config import settings
 from app.db.session import get_session
 from app.i18n.translator import negotiate, translate
@@ -21,7 +28,10 @@ from app.models.action import ActionBinding
 from app.models.device import Device
 from app.models.profile import Button, Profile
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+# Public login/logout routes …
+auth_router = APIRouter(prefix="/admin", tags=["admin"])
+# … and everything else behind the session guard.
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
 TEMPLATES_DIR = Path(__file__).resolve().parents[1] / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -41,6 +51,45 @@ def _parse_buttons(raw: str) -> list[Button]:
             Button(index=index, label=label.strip(), action=action.strip())
         )
     return buttons
+
+
+@auth_router.get("/login", response_class=HTMLResponse)
+def login_form(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={**_base_context(request), "error": None},
+    )
+
+
+@auth_router.post("/login")
+def login(
+    request: Request,
+    username: str = Form(""),
+    password: str = Form(""),
+):
+    if not verify_credentials(username, password):
+        context = _base_context(request)
+        context["error"] = translate("error.invalid_login", context["locale"])
+        return templates.TemplateResponse(
+            request=request, name="login.html", context=context, status_code=401
+        )
+    response = RedirectResponse(url="/admin/profiles", status_code=303)
+    response.set_cookie(
+        COOKIE_NAME,
+        create_session_token(),
+        httponly=True,
+        samesite="lax",
+        max_age=settings.admin_session_seconds,
+    )
+    return response
+
+
+@auth_router.post("/logout")
+def logout() -> RedirectResponse:
+    response = RedirectResponse(url="/admin/login", status_code=303)
+    response.delete_cookie(COOKIE_NAME)
+    return response
 
 
 @router.get("", response_class=HTMLResponse)
@@ -134,8 +183,35 @@ def list_actions(request: Request, session: Session = Depends(get_session)):
     return templates.TemplateResponse(
         request=request,
         name="actions/list.html",
-        context={**_base_context(request), "bindings": bindings},
+        context={
+            **_base_context(request),
+            "bindings": bindings,
+            "imported": request.query_params.get("imported"),
+        },
     )
+
+
+@router.post("/actions/examples")
+def import_example_actions(
+    session: Session = Depends(get_session),
+) -> RedirectResponse:
+    """Seed the example bindings, skipping keys that already exist."""
+    existing = set(session.scalars(select(ActionBinding.action)))
+    for example in load_examples():
+        action = str(example.get("action", "")).strip()
+        executable = str(example.get("executable", "")).strip()
+        if not action or not executable or action in existing:
+            continue
+        session.add(
+            ActionBinding(
+                action=action,
+                executable=executable,
+                args=str(example.get("args", "")).strip(),
+            )
+        )
+        existing.add(action)
+    session.commit()
+    return RedirectResponse(url="/admin/actions?imported=1", status_code=303)
 
 
 @router.get("/actions/new", response_class=HTMLResponse)

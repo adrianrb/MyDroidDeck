@@ -2,7 +2,7 @@ from app.core.executor import build_ps_command, ps_literal
 
 
 def _bind(client, action="obs.scene", executable="notepad.exe", args=""):
-    """Configure an action binding through the admin form."""
+    """Configure an action binding through the admin form (needs admin login)."""
     return client.post(
         "/admin/actions",
         data={"action": action, "executable": executable, "args": args},
@@ -10,9 +10,11 @@ def _bind(client, action="obs.scene", executable="notepad.exe", args=""):
     )
 
 
-def test_dispatch_configured_action(client):
-    assert _bind(client).status_code == 303
-    response = client.post("/actions", json={"action": "obs.scene", "label": "Cena"})
+def test_dispatch_configured_action(admin_client):
+    assert _bind(admin_client).status_code == 303
+    response = admin_client.post(
+        "/actions", json={"action": "obs.scene", "label": "Cena"}
+    )
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ok"
@@ -20,11 +22,10 @@ def test_dispatch_configured_action(client):
     assert body["executed_at"]
 
 
-def test_dispatch_records_last_run_on_binding(client):
-    _bind(client)
-    client.post("/actions", json={"action": "obs.scene"})
-    page = client.get("/admin/actions")
-    assert "notepad.exe" in page.text
+def test_dispatch_records_last_run_on_binding(admin_client):
+    _bind(admin_client)
+    admin_client.post("/actions", json={"action": "obs.scene"})
+    assert "notepad.exe" in admin_client.get("/admin/actions").text
 
 
 def test_dispatch_unknown_action_is_not_executed(client):
@@ -35,10 +36,10 @@ def test_dispatch_unknown_action_is_not_executed(client):
     assert body["executed_at"] is None
 
 
-def test_dispatch_never_maps_arbitrary_strings(client):
-    # Without a binding, even shell-looking action keys are inert.
-    client.post("/admin/actions", data={"action": "luz.mesa", "executable": "x"})
-    body = client.post("/actions", json={"action": "rm -rf /"}).json()
+def test_dispatch_never_maps_arbitrary_strings(admin_client):
+    # Even with bindings present, an unconfigured (shell-looking) key is inert.
+    admin_client.post("/admin/actions", data={"action": "luz.mesa", "executable": "x"})
+    body = admin_client.post("/actions", json={"action": "rm -rf /"}).json()
     assert body["status"] == "unknown"
 
 
@@ -56,3 +57,12 @@ def test_build_ps_command_quotes_paths_and_args():
         == "Start-Process -FilePath 'C:\\Program Files\\App\\app.exe' -ArgumentList '-a b'"
     )
     assert build_ps_command("notepad.exe", "  ") == "Start-Process -FilePath 'notepad.exe'"
+
+
+def test_example_bindings_are_valid():
+    from app.core.action_examples import load_examples
+
+    examples = load_examples()
+    assert examples, "actions.example.json should define at least one example"
+    assert all(item.get("action") and item.get("executable") for item in examples)
+    assert any("kitty" in item["executable"].lower() for item in examples)

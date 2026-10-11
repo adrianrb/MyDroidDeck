@@ -33,5 +33,12 @@
   "admin.new_action": "Nova ação",
   "admin.no_actions": "Nenhuma ação configurada ainda.",
   "error.action_exists": "Já existe uma ação com essa chave.",
-  "error.required": "Preencha os campos obrigatórios."
+  "error.required": "Preencha os campos obrigatórios.",
+  "error.invalid_login": "Usuário ou senha inválidos.",
+  "admin.username": "Usuário",
+  "admin.password": "Senha",
+  "admin.login": "Entrar",
+  "admin.logout": "Sair",
+  "admin.import_examples": "Importar exemplos",
+  "admin.imported": "Ações de exemplo importadas (duplicadas foram ignoradas)."
 }

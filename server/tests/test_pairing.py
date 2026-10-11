@@ -38,17 +38,17 @@ def test_protected_routes_require_auth(anon_client):
     assert anon_client.post("/actions", json={"action": "x"}).status_code == 401
 
 
-def test_revoked_device_token_is_rejected(anon_client):
-    body = anon_client.post(
+def test_revoked_device_token_is_rejected(admin_client):
+    body = admin_client.post(
         "/pair", json={"code": "pair-dev", "device_name": "a-ser-revogado"}
     ).json()
     token, device_id = body["token"], body["device_id"]
 
-    assert anon_client.get(
+    assert admin_client.get(
         "/profiles", headers={"Authorization": f"Bearer {token}"}
     ).status_code == 200
 
-    anon_client.post(f"/admin/devices/{device_id}/revoke")
-    assert anon_client.get(
+    admin_client.post(f"/admin/devices/{device_id}/revoke")
+    assert admin_client.get(
         "/profiles", headers={"Authorization": f"Bearer {token}"}
     ).status_code == 401

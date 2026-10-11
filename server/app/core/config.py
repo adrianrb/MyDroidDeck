@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     exec_engine: str = "wsl"
     # Bounds the PowerShell launcher call, not the launched program (which detaches).
     exec_timeout_seconds: int = 20
+    # Login for the server-rendered admin UI (Jinja). CHANGE these before exposing
+    # the server: the admin pages can register programs the host will execute.
+    admin_user: str = "admin"
+    admin_password: str = "admin"
+    # Signs the admin session cookie; set a stable random value in .env.
+    admin_secret_key: str = "change-me"
+    admin_session_seconds: int = 12 * 60 * 60
 
 
 settings = Settings()
