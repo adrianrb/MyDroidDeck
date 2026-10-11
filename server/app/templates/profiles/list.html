@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="toolbar">
+    <a class="button" href="/admin/profiles/new">{{ t("admin.new_profile") }}</a>
+</div>
+{% if profiles %}
+<table>
+    <thead>
+        <tr>
+            <th>{{ t("admin.name") }}</th>
+            <th>{{ t("admin.locale") }}</th>
+            <th>{{ t("admin.buttons") }}</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for profile in profiles %}
+        <tr>
+            <td>{{ profile.name }}</td>
+            <td>{{ profile.locale }}</td>
+            <td>{{ profile.buttons | length }}</td>
+            <td>
+                <form method="post" action="/admin/profiles/{{ profile.id }}/delete">
+                    <button type="submit" class="danger">{{ t("admin.delete") }}</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="muted">{{ t("admin.empty") }}</p>
+{% endif %}
+{% endblock %}

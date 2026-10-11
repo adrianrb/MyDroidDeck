@@ -16,8 +16,9 @@ class Settings(BaseSettings):
     default_locale: str = "pt_BR"
     supported_locales: tuple[str, ...] = ("pt_BR", "en")
     database_url: str = "sqlite:///./mydroiddeck.db"
-    # Shared secret required by the deck WebSocket (?token=...). Replace in prod.
-    ws_token: str = "dev-token"
+    # Shared secret for app/server auth. Auth/pairing model is still open; replace
+    # with a real flow before shipping. Not enforced by the REST API yet.
+    auth_token: str = "dev-token"
 
 
 settings = Settings()

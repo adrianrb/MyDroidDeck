@@ -20,11 +20,15 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | S-03 | Create/read/delete a profile | Persisted and returned intact (UTF-8 round-trip) | ✅ `test_profiles.py` |
 | S-04 | Create a button with a non-Latin label | Same bytes after save/load (UTF-8) | ✅ `test_profiles.py` |
 | S-05 | Unknown profile id | 404 with a stable error shape | ✅ `test_profiles.py` |
-| S-06 | Invalid payload (missing field) | 400, validation errors listed | ⬜ planned |
-| S-07 | WebSocket client connects with a bad token | Closed with an auth error | ✅ `test_ws.py` |
-| S-08 | Authenticated client dispatches an action | Command acknowledged | ✅ `test_ws.py` |
+| S-06 | Invalid payload (missing field) | 422, validation errors listed | ✅ `test_actions.py` (actions) |
+| S-07 | Dispatch an action over REST (`POST /actions`) | 200 + `{status:"ok",action,executed_at}` | ✅ `test_actions.py` |
+| S-08 | Dispatch without an `action` | 422 validation error | ✅ `test_actions.py` |
 | S-09 | Locale negotiation | pt-BR default; `Accept-Language: en` returns English | ✅ `test_health.py`, `test_profiles.py` |
 | S-10 | Duplicate profile name | 409 conflict | ✅ `test_profiles.py` |
+| S-11 | Admin lists profiles (Jinja) | 200 HTML containing the profile name | ✅ `test_admin.py` |
+| S-12 | Admin creates a profile via HTML form | 303 redirect; profile persisted | ✅ `test_admin.py` |
+| S-13 | Admin form rejects a duplicate name | 409 with a localized message | ✅ `test_admin.py` |
+| S-14 | Admin UI localized | pt-BR default; `Accept-Language: en` English | ✅ `test_admin.py` |
 
 ## Android app (unit / instrumentation)
 | ID | Case | Expected |
@@ -56,5 +60,7 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | N-04 | License attribution | Third-party assets/deps recorded (`docs/FREE_RESOURCES.md`) |
 
 ## Notes
-- Define auth model (token format, expiry) before S-07/E-01/E-03.
-- Decide REST vs WebSocket before S-08/A-02 so the tests target the real transport.
+- Transport is **REST** (decided): the app `POST`s actions to `/actions`. Auth/pairing
+  (token format, expiry) is still open and gates E-01/E-03.
+- The admin UI is server-rendered **Jinja** (decided); its tests assert on localized
+  HTML output (S-11…S-14).

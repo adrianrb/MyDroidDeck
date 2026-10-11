@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+<form method="post" action="/admin/profiles">
+    <label>
+        {{ t("admin.name") }}
+        <input type="text" name="name" required>
+    </label>
+    <label>
+        {{ t("admin.locale") }}
+        <input type="text" name="locale" value="pt_BR">
+    </label>
+    <label>
+        {{ t("admin.buttons_hint") }}
+        <textarea name="buttons" rows="6" placeholder="Cena inicial|obs.scene.iniciar"></textarea>
+    </label>
+    <button type="submit">{{ t("admin.save") }}</button>
+</form>
+{% endblock %}

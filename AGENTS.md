@@ -3,12 +3,12 @@
 ## Project
 **MyDroidDeck** — a "Stream Deck for Android": an Android device acts as a
 programmatic macro/control deck. `app/` = Android client, `server/` = backend that
-stores profiles and dispatches commands. Greenfield: no build files or source yet.
+stores profiles and dispatches commands. Scaffolds for both exist and build green.
 
 ## Environment (Windows 11 host; the agent runs in WSL)
 - This session is Linux/WSL; the Windows `C:` drive is mounted at `/mnt/c` and paths
   are **case-sensitive** (`/mnt/c/Desenv`, not `/mnt/c/desenv`). The repo is at
-  `/mnt/c/Desenv/_Projetos/IA/MyDroidDeck` (a git repo, branch `master`, no commits).
+  `/mnt/c/Desenv/_Projetos/IA/MyDroidDeck` (a git repo, branch `master`).
 - `C:\desenv` holds portable Windows dev tools that are **not on the WSL `PATH`**.
   Call them by absolute path; Windows binaries run as `.exe` (WSL interop works):
   - JDK 21 → `/mnt/c/desenv/JDKs/jdk-21.0.7/bin/java.exe` (also jdk-17.0.x, jdk-8, 13)
@@ -42,22 +42,21 @@ stores profiles and dispatches commands. Greenfield: no build files or source ye
 ## Intended stack
 - `app/` — native Android in **Kotlin + Jetpack Compose** (Material 3). Kotlin
   1.9.24, Compose compiler 1.5.14, AGP 8.5.2, `minSdk 24`.
-- `server/` — **Python + FastAPI** (owner decision): async HTTP + WebSocket for
-  real-time control, SQLAlchemy + SQLite for dev. Admin UI still undecided
-  (React SPA vs. server-rendered Jinja).
+- `server/` — **Python + FastAPI** (owner decision): REST transport between app and
+  server, server-rendered **Jinja** admin UI, SQLAlchemy + SQLite for dev.
 
 ## Layout
 - `server/` — FastAPI app in `server/app/` (`api/` routers, `models/` ORM,
-  `schemas/` Pydantic, `ws/` WebSocket, `i18n/locales/*.json` catalogs); pytest in
-  `server/tests/`. Use the `server/.venv` virtualenv.
+  `schemas/` Pydantic, `templates/` + `static/` Jinja admin UI,
+  `i18n/locales/*.json` catalogs); pytest in `server/tests/`. Use the
+  `server/.venv` virtualenv (`./.venv/bin/pytest`).
 - `app/` — Android Gradle project (Kotlin + Compose). Sources in
   `app/src/main/java/com/mydroiddeck/app/` (`ui/` screens, `ui/theme/`, `model/`,
   `net/`); `res/values/` is pt-BR (default), `res/values-en/` English. Run
   `gradlew-win.bat test` (or `./gradlew test` on Windows).
 
 ## Open decisions
-- `server/`: auth model and admin-UI approach (framework is FastAPI).
-- App/server transport: REST vs WebSocket (or both).
+- `server/`: auth/pairing model between the app and the server.
 
 ## Assets & reusable code
 Free / permissively-licensed assets and open-source repos, with their licenses, are

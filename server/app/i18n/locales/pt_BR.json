@@ -2,5 +2,14 @@
   "health.ok": "Operacional",
   "error.profile_not_found": "Perfil não encontrado.",
   "error.profile_exists": "Já existe um perfil com esse nome.",
-  "error.invalid_payload": "Dados inválidos."
+  "error.invalid_payload": "Dados inválidos.",
+  "admin.title": "MyDroidDeck — Administração",
+  "admin.new_profile": "Novo perfil",
+  "admin.name": "Nome",
+  "admin.locale": "Idioma",
+  "admin.buttons": "Botões",
+  "admin.buttons_hint": "Botões (um por linha: rótulo|ação)",
+  "admin.delete": "Excluir",
+  "admin.save": "Salvar",
+  "admin.empty": "Nenhum perfil cadastrado ainda."
 }

@@ -1,0 +1,39 @@
+def test_admin_lists_created_profiles(client):
+    client.post("/profiles", json={"name": "Deck", "buttons": []})
+    response = client.get("/admin/profiles")
+    assert response.status_code == 200
+    assert "Deck" in response.text
+
+
+def test_admin_create_via_html_form(client):
+    response = client.post(
+        "/admin/profiles",
+        data={"name": "Painel", "locale": "pt_BR", "buttons": "Play|spotify.play"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert "Painel" in client.get("/admin/profiles").text
+
+
+def test_admin_form_rejects_duplicate(client):
+    client.post("/profiles", json={"name": "Dup"})
+    response = client.post(
+        "/admin/profiles", data={"name": "Dup"}, follow_redirects=False
+    )
+    assert response.status_code == 409
+    assert "já existe" in response.text.lower()
+
+
+def test_admin_delete(client):
+    profile_id = client.post("/profiles", json={"name": "Temp"}).json()["id"]
+    response = client.post(
+        f"/admin/profiles/{profile_id}/delete", follow_redirects=False
+    )
+    assert response.status_code == 303
+    assert client.get(f"/profiles/{profile_id}").status_code == 404
+
+
+def test_admin_ui_is_localized(client):
+    assert "Administração" in client.get("/admin/profiles").text
+    english = client.get("/admin/profiles", headers={"Accept-Language": "en"})
+    assert "Admin" in english.text

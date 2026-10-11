@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from app import __version__
-from app.api import health, profiles
+from app.api import actions, admin, health, profiles
 from app.db.session import Base, engine
-from app.ws import deck
+
+BASE_DIR = Path(__file__).resolve().parent
 
 
 @asynccontextmanager
@@ -20,9 +23,13 @@ async def lifespan(_: FastAPI):
 
 def create_app() -> FastAPI:
     application = FastAPI(title="MyDroidDeck", version=__version__, lifespan=lifespan)
+    application.mount(
+        "/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static"
+    )
     application.include_router(health.router)
     application.include_router(profiles.router)
-    application.include_router(deck.router)
+    application.include_router(actions.router)
+    application.include_router(admin.router)
     return application
 
 

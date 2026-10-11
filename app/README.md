@@ -1,8 +1,8 @@
 # MyDroidDeck app
 
 Native Android client in **Kotlin + Jetpack Compose (Material 3)**. Renders a grid
-of deck buttons and (in progress) syncs/dispatches actions to the server over
-REST/WebSocket.
+of deck buttons and (in progress) syncs profiles and dispatches actions to the
+server over **REST**.
 
 ## Build
 

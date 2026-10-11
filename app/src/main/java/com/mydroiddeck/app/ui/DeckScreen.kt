@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,8 +26,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.mydroiddeck.app.R
+import com.mydroiddeck.app.model.ActionRequest
 import com.mydroiddeck.app.model.DeckButton
+import com.mydroiddeck.app.net.ApiClient
 import com.mydroiddeck.app.ui.theme.MyDroidDeckTheme
+import kotlinx.coroutines.launch
 
 private const val GRID_COLUMNS = 4
 private const val PLACEHOLDER_BUTTONS = 8
@@ -40,6 +44,7 @@ private fun placeholderButtons(): List<DeckButton> =
 fun DeckScreen(modifier: Modifier = Modifier) {
     val buttons = remember { placeholderButtons() }
     var lastAction by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     Column(modifier = modifier.fillMaxSize().padding(8.dp)) {
         LazyVerticalGrid(
@@ -51,7 +56,15 @@ fun DeckScreen(modifier: Modifier = Modifier) {
                 val label = button.label.ifBlank {
                     stringResource(R.string.button_default_label, button.index + 1)
                 }
-                DeckButtonCard(label = label, onClick = { lastAction = label })
+                DeckButtonCard(label = label) {
+                    lastAction = label
+                    scope.launch {
+                        // REST dispatch; network failures are swallowed until UI states exist.
+                        runCatching {
+                            ApiClient.api.dispatch(ActionRequest(button.action, label))
+                        }
+                    }
+                }
             }
         }
         Text(
