@@ -52,16 +52,19 @@ stores profiles and dispatches commands. Scaffolds for both exist and build gree
 - `server/` — FastAPI app in `server/app/` (`api/` routers, `models/` ORM,
   `schemas/` Pydantic, `core/security.py` device-token auth + `api/pairing.py`,
   `core/admin_auth.py` admin login/session, `core/executor.py` launches configured
-  **Windows executables** for dispatched actions via WSL interop, `templates/` +
-  `static/` Jinja admin UI incl. `/admin/actions`, `i18n/locales/*.json` catalogs,
+  **Windows executables** for dispatched actions via WSL interop, `core/icons.py`
+  extracts each executable's **real icon** (PNG, cached in `MYDROIDDECK_ICON_CACHE_DIR`,
+  served at `GET /icon?action=`) for the deck buttons, `templates/` + `static/` Jinja
+  admin UI incl. `/admin/actions`, `i18n/locales/*.json` catalogs,
   `actions.example.json` seed bindings); pytest in `server/tests/`.
   Use the `server/.venv` virtualenv (`./.venv/bin/pytest`). Dev pairing code:
   `pair-dev` (`MYDROIDDECK_PAIRING_CODE`). Version: `server/version.txt`.
 - `app/` — Android Gradle project (Kotlin + Compose). Sources in
-  `app/src/main/java/com/mydroiddeck/app/` (`ui/` screens, `ui/theme/`, `model/`,
-  `net/`); `res/values/` is pt-BR (default), `res/values-en/` English. Run
-  `gradlew-win.bat test` (or `./gradlew test` on Windows). Version:
-  `app/version.txt` (feeds `versionName`/`versionCode`).
+  `app/src/main/java/com/mydroiddeck/app/` (`ui/` screens incl. `DeckScreen.kt`
+  (deck + per-tap status), `DeckIcons.kt` (icon cache), `ThemeMode.kt` (dark-mode
+  choice), `ui/theme/`, `model/`, `net/`); `res/values/` is pt-BR (default),
+  `res/values-en/` English. Run `gradlew-win.bat test` (or `./gradlew test` on
+  Windows). Version: `app/version.txt` (feeds `versionName`/`versionCode`).
 
 ## Deploy (local, WSL host)
 - The FastAPI server runs detached from the terminal (`setsid`): **Ctrl+C doesn't
@@ -86,7 +89,10 @@ stores profiles and dispatches commands. Scaffolds for both exist and build gree
 - Button actions execute **Windows executables** configured in `/admin/actions`
   (server → `powershell.exe Start-Process`, WSL interop). Only configured bindings
   run; anything else returns `status:"unknown"`. `POST /admin/actions/examples`
-  seeds the example set from `server/actions.example.json`.
+  seeds the example set from `server/actions.example.json`, and
+  `POST /admin/profiles/{id}/examples` fills a profile with one button per binding.
+  The deck's buttons show the bound program's **real icon** (`GET /icon?action=`,
+  extracted from the executable; 404 → label only).
 - The admin HTML UI requires login (`MYDROIDDECK_ADMIN_USER` / `_ADMIN_PASSWORD` /
   `_ADMIN_SECRET_KEY` in `server/.env`); the session is a signed cookie with
   `MYDROIDDECK_ADMIN_SESSION_SECONDS` lifetime.

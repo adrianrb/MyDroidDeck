@@ -2,8 +2,18 @@
 <resources>
     <string name="app_name">MyDroidDeck</string>
     <string name="status_ready">Ready.</string>
-    <string name="status_last_action">Last action: %1$s</string>
     <string name="button_default_label">Button %1$d</string>
+    <string name="deck_loading">Loading profiles…</string>
+    <string name="deck_error">Could not load the profiles from the server.</string>
+    <string name="deck_retry">Retry</string>
+    <string name="deck_empty">No profiles on the server. Create one in /admin/profiles.</string>
+    <string name="deck_status_sent">Sent: %1$s</string>
+    <string name="deck_status_unknown">Action not configured on the server: %1$s</string>
+    <string name="deck_status_failed">Failed to send: %1$s</string>
+    <string name="theme_button">Theme</string>
+    <string name="theme_system">Follow the system</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
     <string name="pairing_title">Pair with server</string>
     <string name="pairing_hint">Enter the code shown on the server\'s devices page and adjust the URL if the deck runs on another device.</string>
     <string name="pairing_server_url">Server URL</string>

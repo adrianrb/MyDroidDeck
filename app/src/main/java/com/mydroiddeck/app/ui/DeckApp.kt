@@ -9,7 +9,10 @@ import com.mydroiddeck.app.net.TokenStore
 
 /** Root of the Compose UI: shows the deck once a device token exists, else pairing. */
 @Composable
-fun DeckApp() {
+fun DeckApp(
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    onThemeModeChange: (ThemeMode) -> Unit = {},
+) {
     var paired by remember { mutableStateOf(!TokenStore.token.isNullOrBlank()) }
 
     if (paired) {
@@ -18,6 +21,8 @@ fun DeckApp() {
                 TokenStore.clear()
                 paired = false
             },
+            themeMode = themeMode,
+            onThemeModeChange = onThemeModeChange,
         )
     } else {
         PairingScreen(onPaired = { paired = true })

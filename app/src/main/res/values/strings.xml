@@ -3,8 +3,18 @@
 <resources>
     <string name="app_name">MyDroidDeck</string>
     <string name="status_ready">Pronto.</string>
-    <string name="status_last_action">Última ação: %1$s</string>
     <string name="button_default_label">Botão %1$d</string>
+    <string name="deck_loading">Carregando perfis…</string>
+    <string name="deck_error">Não foi possível carregar os perfis do servidor.</string>
+    <string name="deck_retry">Tentar de novo</string>
+    <string name="deck_empty">Nenhum perfil no servidor. Crie um em /admin/profiles.</string>
+    <string name="deck_status_sent">Enviado: %1$s</string>
+    <string name="deck_status_unknown">Ação não configurada no servidor: %1$s</string>
+    <string name="deck_status_failed">Falha ao enviar: %1$s</string>
+    <string name="theme_button">Tema</string>
+    <string name="theme_system">Seguir o sistema</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Escuro</string>
     <string name="pairing_title">Parear com o servidor</string>
     <string name="pairing_hint">Digite o código exibido na página de dispositivos do servidor e ajuste a URL se o deck estiver em outro aparelho.</string>
     <string name="pairing_server_url">URL do servidor</string>

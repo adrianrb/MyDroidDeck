@@ -5,9 +5,11 @@ import com.mydroiddeck.app.model.ActionResult
 import com.mydroiddeck.app.model.DeckProfile
 import com.mydroiddeck.app.model.PairRequest
 import com.mydroiddeck.app.model.PairResponse
+import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 /** REST surface of the MyDroidDeck server consumed by the app. */
 interface DeckApi {
@@ -20,4 +22,11 @@ interface DeckApi {
 
     @POST("actions")
     suspend fun dispatch(@Body request: ActionRequest): ActionResult
+
+    /**
+     * The real icon (PNG) of the program bound to [action], extracted from the
+     * Windows executable by the server. 404 when the action has no icon.
+     */
+    @GET("icon")
+    suspend fun icon(@Query("action") action: String): ResponseBody
 }
