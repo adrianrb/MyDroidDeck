@@ -23,7 +23,8 @@ Endpoints:
 - `GET|POST /profiles`, `GET /profiles/{id}`, `DELETE /profiles/{id}`, `POST /actions`
   — protected: send `Authorization: Bearer <token>` from `/pair`
 - `GET /admin/profiles`, `GET|POST /admin/profiles/…`, `GET /admin/devices`,
-  `POST /admin/devices/{id}/revoke` — server-rendered admin UI (not authenticated yet)
+  `POST /admin/devices/{id}/revoke`, `GET|POST /admin/actions`,
+  `POST /admin/actions/{id}/delete` — server-rendered admin UI (not authenticated yet)
 
 Config is overridable with `MYDROIDDECK_*` env vars (see `app/core/config.py`);
 SQLite is used by default.
@@ -33,6 +34,29 @@ SQLite is used by default.
 ```bash
 .venv/bin/pytest
 ```
+
+## Ações → executáveis do Windows
+
+Cada botão do deck envia uma **chave de ação** (`POST /actions` — o texto depois do
+`|` em `rótulo|ação`). O servidor só executa o que o admin mapeou: em
+**`/admin/actions`** cadastre `ação → executável do Windows (+ argumentos)`.
+
+Como o servidor roda no WSL2, o programa é iniciado via **interop do WSL**
+(`powershell.exe` + `Start-Process`), **destacado e sem janela de console**; o
+`POST /actions` responde na hora.
+
+| `action` (chave) | `executable` | `args` |
+| --- | --- | --- |
+| `obs.scene.iniciar` | `C:\Program Files\obs-studio\bin\64bit\obs64.exe` | `--startrecording` |
+| `bloco.notas` | `notepad.exe` | |
+| `meu.script` | `C:\scripts\setup.bat` | |
+
+- Ação **sem binding** → resposta `{"status":"unknown"}` e **nada é executado**
+  (strings arbitrárias vindas dos aparelhos ficam inertes).
+- Caminhos com espaços são citados com segurança (literais do PowerShell).
+- As últimas execuções aparecem em `/admin/actions` (`last_run_at` / `last_status`).
+- `MYDROIDDECK_EXEC_ENGINE=dry-run` simula o lançamento (não abre programa) — usado
+  pelos testes; `MYDROIDDECK_EXEC_TIMEOUT_SECONDS` limita o launcher.
 
 ## Deploy (neste host — WSL, sem systemd/Docker)
 
@@ -60,5 +84,6 @@ netsh advfirewall firewall add rule name="MyDroidDeck 8000" dir=in action=allow 
 No app (tela de pareamento), informe `http://<ip-lan-do-windows>:8000/`
 (ex.: `http://192.168.100.7:8000/`) e o código de pareamento.
 
-> ⚠️ O admin HTML (`/admin/devices`) mostra o código de pareamento e **não tem
-> autenticação** — não exponha na internet pública enquanto isso não for resolvido.
+> ⚠️ O admin HTML (`/admin/devices`, `/admin/actions`) mostra o código de pareamento
+> e permite **cadastrar executáveis que o servidor lança no Windows** — e **não tem
+> autenticação**. Não exponha na internet pública enquanto isso não for resolvido.

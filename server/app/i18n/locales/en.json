@@ -22,5 +22,16 @@
   "admin.active": "Active",
   "admin.revoked": "Revoked",
   "admin.revoke": "Revoke",
-  "admin.no_devices": "No paired devices yet."
+  "admin.no_devices": "No paired devices yet.",
+  "admin.actions": "Actions",
+  "admin.action": "Action (key)",
+  "admin.action_hint": "Key sent by the deck button (the part after | in label|action).",
+  "admin.executable": "Windows executable",
+  "admin.executable_hint": "Path or name of the Windows executable (e.g. notepad.exe).",
+  "admin.args": "Arguments (optional)",
+  "admin.last_run": "Last run",
+  "admin.new_action": "New action",
+  "admin.no_actions": "No actions configured yet.",
+  "error.action_exists": "An action with that key already exists.",
+  "error.required": "Fill in the required fields."
 }

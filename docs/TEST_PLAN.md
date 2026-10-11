@@ -21,7 +21,7 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | S-04 | Create a button with a non-Latin label | Same bytes after save/load (UTF-8) | ✅ `test_profiles.py` |
 | S-05 | Unknown profile id | 404 with a stable error shape | ✅ `test_profiles.py` |
 | S-06 | Invalid payload (missing field) | 422, validation errors listed | ✅ `test_actions.py` (actions) |
-| S-07 | Dispatch an action over REST (`POST /actions`) | 200 + `{status:"ok",action,executed_at}` | ✅ `test_actions.py` |
+| S-07 | Dispatch an action over REST (`POST /actions`) | 200 + `{status,action,detail?,executed_at?}` | ✅ `test_actions.py` |
 | S-08 | Dispatch without an `action` | 422 validation error | ✅ `test_actions.py` |
 | S-09 | Locale negotiation | pt-BR default; `Accept-Language: en` returns English | ✅ `test_health.py`, `test_profiles.py` |
 | S-10 | Duplicate profile name | 409 conflict | ✅ `test_profiles.py` |
@@ -35,6 +35,9 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | S-18 | Protected REST without a token | 401 for `/profiles` and `/actions` | ✅ `test_pairing.py` |
 | S-19 | Revoked device token | 401 after admin revoke (covers E-03) | ✅ `test_pairing.py` |
 | S-20 | Admin lists and revokes devices | Devices page shows paired device; revoke works | ✅ `test_admin.py` |
+| S-21 | Dispatch a configured action | Runs its Windows binding; records `last_run_at`/`last_status` | ✅ `test_actions.py` |
+| S-22 | Dispatch an unconfigured action | 200 `status:"unknown"`; nothing is executed | ✅ `test_actions.py` |
+| S-23 | Admin manages action bindings | Create via form (303), duplicate 409, delete | ✅ `test_admin.py` |
 
 ## Android app (unit / instrumentation)
 | ID | Case | Expected |
@@ -53,7 +56,7 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | ID | Case | Expected |
 | --- | --- | --- |
 | E-01 | Pair device (scan/enter token) | Device authorized; deck loads |
-| E-02 | Create profile on app → run on server | Action executes on the host |
+| E-02 | Create profile on app → run on server | Action executes on the host (server side: configured Windows executables via WSL interop; `test_actions.py`) |
 | E-03 | Pair with a revoked token | Rejected with a clear message |
 | E-04 | Two devices, one profile | Both see updates without clobbering |
 
@@ -61,7 +64,7 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | ID | Case | Expected |
 | --- | --- | --- |
 | N-01 | Source/config/data files | Saved/loaded as UTF-8 |
-| N-02 | Version bumps | `app` and `server` versions stay consistent per release |
+| N-02 | Version bumps | Each component reads its own `version.txt` (SemVer X.Y.Z): server `/version`, app `versionName` |
 | N-03 | i18n completeness | No missing keys in any shipped locale (fail build on gap) |
 | N-04 | License attribution | Third-party assets/deps recorded (`docs/FREE_RESOURCES.md`) |
 
@@ -72,3 +75,9 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
   HTML output (S-11…S-14, S-20).
 - E-01 (pair device) is implemented via the pairing code; E-03 (revoked token) is
   covered by S-19.
+- Action execution runs **Windows executables** from the WSL host
+  (`app/core/executor.py`: `powershell.exe Start-Process`); only admin-configured
+  bindings execute, arbitrary keys are inert (S-21…S-23). Tests use
+  `MYDROIDDECK_EXEC_ENGINE=dry-run`.
+- Versions are versioned **separately**: `server/version.txt` and `app/version.txt`
+  are each component's single source of truth (N-02).

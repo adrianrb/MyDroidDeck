@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a class="button" href="/admin/actions/new">{{ t("admin.new_action") }}</a></p>
+{% if bindings %}
+<table>
+    <thead>
+        <tr>
+            <th>{{ t("admin.action") }}</th>
+            <th>{{ t("admin.executable") }}</th>
+            <th>{{ t("admin.args") }}</th>
+            <th>{{ t("admin.last_run") }}</th>
+            <th>{{ t("admin.status") }}</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for binding in bindings %}
+        <tr>
+            <td><code>{{ binding.action }}</code></td>
+            <td>{{ binding.executable }}</td>
+            <td>{{ binding.args }}</td>
+            <td>
+                {% if binding.last_run_at %}{{ binding.last_run_at.strftime('%Y-%m-%d %H:%M:%S') }}{% else %}—{% endif %}
+            </td>
+            <td>{{ binding.last_status or "—" }}</td>
+            <td>
+                <form method="post" action="/admin/actions/{{ binding.id }}/delete">
+                    <button type="submit" class="danger">{{ t("admin.delete") }}</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="muted">{{ t("admin.no_actions") }}</p>
+{% endif %}
+{% endblock %}

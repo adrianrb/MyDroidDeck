@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import get_session
 from app.i18n.translator import negotiate, translate
+from app.models.action import ActionBinding
 from app.models.device import Device
 from app.models.profile import Button, Profile
 
@@ -125,3 +126,63 @@ def revoke_device(
         device.revoked = True
         session.commit()
     return RedirectResponse(url="/admin/devices", status_code=303)
+
+
+@router.get("/actions", response_class=HTMLResponse)
+def list_actions(request: Request, session: Session = Depends(get_session)):
+    bindings = list(session.scalars(select(ActionBinding).order_by(ActionBinding.id)))
+    return templates.TemplateResponse(
+        request=request,
+        name="actions/list.html",
+        context={**_base_context(request), "bindings": bindings},
+    )
+
+
+@router.get("/actions/new", response_class=HTMLResponse)
+def new_action(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="actions/form.html",
+        context={**_base_context(request), "error": None},
+    )
+
+
+@router.post("/actions")
+def create_action(
+    request: Request,
+    action: str = Form(""),
+    executable: str = Form(""),
+    args: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    context = _base_context(request)
+    if not action.strip() or not executable.strip():
+        context["error"] = translate("error.required", context["locale"])
+        return templates.TemplateResponse(
+            request=request, name="actions/form.html", context=context, status_code=400
+        )
+    if session.scalar(select(ActionBinding).where(ActionBinding.action == action.strip())):
+        context["error"] = translate("error.action_exists", context["locale"])
+        return templates.TemplateResponse(
+            request=request, name="actions/form.html", context=context, status_code=409
+        )
+    session.add(
+        ActionBinding(
+            action=action.strip(),
+            executable=executable.strip(),
+            args=args.strip(),
+        )
+    )
+    session.commit()
+    return RedirectResponse(url="/admin/actions", status_code=303)
+
+
+@router.post("/actions/{action_id}/delete")
+def delete_action(
+    action_id: int, session: Session = Depends(get_session)
+) -> RedirectResponse:
+    binding = session.get(ActionBinding, action_id)
+    if binding is not None:
+        session.delete(binding)
+        session.commit()
+    return RedirectResponse(url="/admin/actions", status_code=303)

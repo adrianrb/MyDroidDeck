@@ -31,7 +31,10 @@ stores profiles and dispatches commands. Scaffolds for both exist and build gree
   and `/tmp`**.
 
 ## Conventions (project-owner directives)
-- Versioning: **X.Y.Z** (semantic versioning) for both `app/` and `server/`.
+- Versioning: **X.Y.Z** (semantic versioning), **independent per component** — each
+  has its own `version.txt` (`app/version.txt`, `server/version.txt`) as the single
+  source of truth (`versionName`/`versionCode` on the app; `/version` + `/health` on
+  the server).
 - Encoding: **UTF-8** everywhere (source, config, data).
 - Language: **pt-BR is the default**, and both app and server must support
   internationalization — externalize all strings into resource bundles, never
@@ -48,14 +51,16 @@ stores profiles and dispatches commands. Scaffolds for both exist and build gree
 ## Layout
 - `server/` — FastAPI app in `server/app/` (`api/` routers, `models/` ORM,
   `schemas/` Pydantic, `core/security.py` token auth + `api/pairing.py`,
-  `templates/` + `static/` Jinja admin UI, `i18n/locales/*.json` catalogs);
-  pytest in `server/tests/`. Use the `server/.venv` virtualenv
-  (`./.venv/bin/pytest`). Dev pairing code: `pair-dev`
-  (`MYDROIDDECK_PAIRING_CODE`).
+  `core/executor.py` launches configured **Windows executables** for dispatched
+  actions via WSL interop, `templates/` + `static/` Jinja admin UI incl.
+  `/admin/actions`, `i18n/locales/*.json` catalogs); pytest in `server/tests/`.
+  Use the `server/.venv` virtualenv (`./.venv/bin/pytest`). Dev pairing code:
+  `pair-dev` (`MYDROIDDECK_PAIRING_CODE`). Version: `server/version.txt`.
 - `app/` — Android Gradle project (Kotlin + Compose). Sources in
   `app/src/main/java/com/mydroiddeck/app/` (`ui/` screens, `ui/theme/`, `model/`,
   `net/`); `res/values/` is pt-BR (default), `res/values-en/` English. Run
-  `gradlew-win.bat test` (or `./gradlew test` on Windows).
+  `gradlew-win.bat test` (or `./gradlew test` on Windows). Version:
+  `app/version.txt` (feeds `versionName`/`versionCode`).
 
 ## Deploy (local, WSL host)
 - The FastAPI server runs detached from the terminal (`setsid`): **Ctrl+C doesn't
@@ -67,11 +72,16 @@ stores profiles and dispatches commands. Scaffolds for both exist and build gree
 - App install on a connected device (Windows paths needed for `adb.exe`):
   `cmd.exe /c 'C:\desenv\Android\Sdk\platform-tools\adb.exe install -r C:\Desenv\_Projetos\IA\MyDroidDeck\app\build\outputs\apk\debug\MyDroidDeck-debug.apk'`
 - The cleartext network config is broad for LAN dev; harden before any public exposure.
+- Button actions execute **Windows executables** configured in `/admin/actions`
+  (server → `powershell.exe Start-Process`, WSL interop). Only configured bindings
+  run; anything else returns `status:"unknown"`.
 
 ## Open decisions
 - `server/`: the admin HTML UI is **not authenticated yet** — device tokens protect
   only the JSON REST API (`/profiles`, `/actions`); pairing uses a shared
-  `pairing_code` + per-device tokens.
+  `pairing_code` + per-device tokens. Because `/admin/actions` can register
+  Windows programs the server will launch, treat the admin UI as a trusted,
+  LAN-only surface until it gets auth.
 
 ## Assets & reusable code
 Free / permissively-licensed assets and open-source repos, with their licenses, are

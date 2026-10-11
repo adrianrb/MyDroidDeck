@@ -22,5 +22,16 @@
   "admin.active": "Ativo",
   "admin.revoked": "Revogado",
   "admin.revoke": "Revogar",
-  "admin.no_devices": "Nenhum dispositivo pareado ainda."
+  "admin.no_devices": "Nenhum dispositivo pareado ainda.",
+  "admin.actions": "Ações",
+  "admin.action": "Ação (chave)",
+  "admin.action_hint": "Chave enviada pelo botão no deck (a parte após o | em rótulo|ação).",
+  "admin.executable": "Executável do Windows",
+  "admin.executable_hint": "Caminho ou nome do executável no Windows (ex.: notepad.exe).",
+  "admin.args": "Argumentos (opcional)",
+  "admin.last_run": "Última execução",
+  "admin.new_action": "Nova ação",
+  "admin.no_actions": "Nenhuma ação configurada ainda.",
+  "error.action_exists": "Já existe uma ação com essa chave.",
+  "error.required": "Preencha os campos obrigatórios."
 }

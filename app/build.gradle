@@ -3,6 +3,15 @@ plugins {
     id 'org.jetbrains.kotlin.android' version '1.9.24'
 }
 
+// The component version lives in app/version.txt (SemVer X.Y.Z), versioned
+// separately from the server. Fail the build fast if it drifts from SemVer.
+def appVersionTxt = new File(projectDir, 'version.txt').text.trim()
+if (!(appVersionTxt ==~ /\d+\.\d+\.\d+/)) {
+    throw new GradleException("app/version.txt must be SemVer X.Y.Z, got: '${appVersionTxt}'")
+}
+def appVersionParts = appVersionTxt.tokenize('.').collect { it.toInteger() }
+def appVersionCode = appVersionParts[0] * 10000 + appVersionParts[1] * 100 + appVersionParts[2]
+
 android {
     namespace 'com.mydroiddeck.app'
     compileSdk 34
@@ -11,8 +20,8 @@ android {
         applicationId 'com.mydroiddeck.app'
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName '0.1.0'
+        versionCode appVersionCode
+        versionName appVersionTxt
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         vectorDrawables {
             useSupportLibrary true

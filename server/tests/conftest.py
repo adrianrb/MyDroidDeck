@@ -8,6 +8,12 @@ os.environ["MYDROIDDECK_DATABASE_URL"] = (
     f"sqlite:///{tempfile.mkdtemp(prefix='mydroiddeck-test-')}/test.db"
 )
 
+# Never launch real Windows programs from tests: record the attempt only.
+os.environ["MYDROIDDECK_EXEC_ENGINE"] = "dry-run"
+
+# Hermetic runs: a developer's .env must not change the pairing code under test.
+os.environ["MYDROIDDECK_PAIRING_CODE"] = "pair-dev"
+
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.core.config import settings  # noqa: E402
