@@ -5,13 +5,27 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-/** Builds the Retrofit client. */
+/** Builds the Retrofit client for the currently configured server URL. */
 object ApiClient {
 
-    /** Android emulator maps the host machine to 10.0.2.2; use the LAN IP on a device. */
-    const val BASE_URL = "http://10.0.2.2:8000/"
+    /** Server base URL, editable on the pairing screen and persisted by [TokenStore]. */
+    val baseUrl: String get() = TokenStore.baseUrl
 
-    val api: DeckApi by lazy {
+    private var cached: DeckApi? = null
+    private var cachedUrl: String? = null
+
+    /** Returns a Retrofit [DeckApi], rebuilding it when the server URL changes. */
+    @Synchronized
+    fun api(): DeckApi {
+        val url = baseUrl
+        if (cached == null || cachedUrl != url) {
+            cached = build(url)
+            cachedUrl = url
+        }
+        return cached!!
+    }
+
+    private fun build(baseUrl: String): DeckApi {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BASIC
         }
@@ -30,8 +44,8 @@ object ApiClient {
             }
             .addInterceptor(logging)
             .build()
-        Retrofit.Builder()
-            .baseUrl(BASE_URL)
+        return Retrofit.Builder()
+            .baseUrl(baseUrl)
             .client(httpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

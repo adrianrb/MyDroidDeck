@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Allows cleartext HTTP to the dev host only. Remove for production (use HTTPS). -->
+<!-- Dev/LAN build: allow cleartext HTTP to any host (the deck talks to a LAN
+     FastAPI server over plain HTTP). Require HTTPS and remove this for
+     production builds. -->
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">10.0.2.2</domain>
-        <domain includeSubdomains="true">localhost</domain>
-    </domain-config>
+    <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

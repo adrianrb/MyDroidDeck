@@ -38,6 +38,7 @@ fun PairingScreen(
 ) {
     var code by remember { mutableStateOf("") }
     var deviceName by remember { mutableStateOf("") }
+    var serverUrl by remember { mutableStateOf(TokenStore.baseUrl) }
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -60,6 +61,14 @@ fun PairingScreen(
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(vertical = 8.dp),
         )
+        OutlinedTextField(
+            value = serverUrl,
+            onValueChange = { serverUrl = it },
+            label = { Text(stringResource(R.string.pairing_server_url)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
         OutlinedTextField(
             value = code,
             onValueChange = { code = it },
@@ -87,9 +96,13 @@ fun PairingScreen(
             onClick = {
                 busy = true
                 error = null
+                // Persist the URL first so the temporary Retrofit instance hits the
+                // server the user just typed.
+                val normalized = serverUrl.trim().let { if (it.endsWith("/")) it else "$it/" }
+                TokenStore.baseUrl = normalized
                 scope.launch {
                     try {
-                        val result = ApiClient.api.pair(
+                        val result = ApiClient.api().pair(
                             PairRequest(code = code.trim(), deviceName = deviceName.trim())
                         )
                         TokenStore.token = result.token

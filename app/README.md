@@ -23,6 +23,11 @@ First launch shows a pairing screen. Enter the code shown at
 returns a per-device token, stored locally and sent as `Authorization: Bearer` on
 every REST call. A revoked token (401) drops the pairing and returns to the screen.
 
+The screen also lets you change the **server URL** (persisted) — for a physical
+device use the Windows host's LAN IP, e.g. `http://192.168.100.7:8000/` (the
+emulator keeps `10.0.2.2:8000`). See `server/README.md` for the LAN port-forward
+setup on WSL2.
+
 ## Layout
 
 - `src/main/java/com/mydroiddeck/app/` — `MainActivity`, `model/`, `net/`, `ui/`

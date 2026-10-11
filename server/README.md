@@ -33,3 +33,32 @@ SQLite is used by default.
 ```bash
 .venv/bin/pytest
 ```
+
+## Deploy (neste host — WSL, sem systemd/Docker)
+
+O servidor roda como um **processo destacado do terminal**: `setsid` + `nohup`,
+então **Ctrl+C no seu shell não o derruba** (o request anterior de "ignorar Ctrl+C"
+é satisfeito por isso). Segredos ficam em `.env` (gitignored; veja `.env.example`).
+
+```bash
+deploy/start.sh    # sobe em 0.0.0.0:8000 destacado; log em deploy/server.log
+deploy/status.sh   # processo ativo? /health responde?
+deploy/stop.sh     # para o processo registrado
+```
+
+### Acesso a partir de outros aparelhos (LAN)
+
+O servidor escuta em `0.0.0.0` **dentro do WSL2**. O emulador Android alcança o
+host via `10.0.2.2` (localhost forwarding automático). Para um aparelho físico na
+LAN, é preciso rotear a porta no Windows (uma única vez, como **admin**):
+
+```bat
+netsh interface portproxy add v4tov4 listenport=8000 listenaddress=0.0.0.0 connectport=8000 connectaddress=127.0.0.1
+netsh advfirewall firewall add rule name="MyDroidDeck 8000" dir=in action=allow protocol=TCP localport=8000
+```
+
+No app (tela de pareamento), informe `http://<ip-lan-do-windows>:8000/`
+(ex.: `http://192.168.100.7:8000/`) e o código de pareamento.
+
+> ⚠️ O admin HTML (`/admin/devices`) mostra o código de pareamento e **não tem
+> autenticação** — não exponha na internet pública enquanto isso não for resolvido.

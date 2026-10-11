@@ -5,7 +5,8 @@
     <string name="status_last_action">Last action: %1$s</string>
     <string name="button_default_label">Button %1$d</string>
     <string name="pairing_title">Pair with server</string>
-    <string name="pairing_hint">Enter the code shown on the server\'s devices page (http://10.0.2.2:8000/admin/devices).</string>
+    <string name="pairing_hint">Enter the code shown on the server\'s devices page and adjust the URL if the deck runs on another device.</string>
+    <string name="pairing_server_url">Server URL</string>
     <string name="pairing_code">Code</string>
     <string name="pairing_device_name">This device\'s name</string>
     <string name="pairing_action">Pair</string>

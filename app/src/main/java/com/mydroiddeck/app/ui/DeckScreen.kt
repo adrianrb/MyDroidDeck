@@ -64,7 +64,7 @@ fun DeckScreen(
                     lastAction = label
                     scope.launch {
                         try {
-                            ApiClient.api.dispatch(ActionRequest(button.action, label))
+                            ApiClient.api().dispatch(ActionRequest(button.action, label))
                         } catch (e: HttpException) {
                             // Revoked/expired token: drop it and re-pair.
                             if (e.code() == 401) onUnauthorized()

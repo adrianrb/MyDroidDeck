@@ -57,6 +57,17 @@ stores profiles and dispatches commands. Scaffolds for both exist and build gree
   `net/`); `res/values/` is pt-BR (default), `res/values-en/` English. Run
   `gradlew-win.bat test` (or `./gradlew test` on Windows).
 
+## Deploy (local, WSL host)
+- The FastAPI server runs detached from the terminal (`setsid`): **Ctrl+C doesn't
+  stop it**. Manage it with `server/deploy/{start,stop,status}.sh` (log+PID in
+  `server/deploy/`, secrets in gitignored `server/.env`, DB in `server/data/`).
+- It is bound to `0.0.0.0:8000` inside WSL2. Emulator reaches it via `10.0.2.2`;
+  a physical device needs the Windows portproxy + firewall rule (see `server/README.md`)
+  and the app's server URL set to the Windows LAN IP.
+- App install on a connected device (Windows paths needed for `adb.exe`):
+  `cmd.exe /c 'C:\desenv\Android\Sdk\platform-tools\adb.exe install -r C:\Desenv\_Projetos\IA\MyDroidDeck\app\build\outputs\apk\debug\MyDroidDeck-debug.apk'`
+- The cleartext network config is broad for LAN dev; harden before any public exposure.
+
 ## Open decisions
 - `server/`: the admin HTML UI is **not authenticated yet** — device tokens protect
   only the JSON REST API (`/profiles`, `/actions`); pairing uses a shared
