@@ -8,3 +8,5 @@ __pycache__/
 data/
 deploy/*.log
 deploy/*.pid
+# Generated TLS material (cert.pem is copied into the app; the key stays here).
+deploy/tls/

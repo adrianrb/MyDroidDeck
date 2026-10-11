@@ -68,11 +68,21 @@ stores profiles and dispatches commands. Scaffolds for both exist and build gree
   stop it**. Manage it with `server/deploy/{start,stop,status}.sh` (log+PID in
   `server/deploy/`, secrets in gitignored `server/.env`, DB in `server/data/`).
 - It is bound to `0.0.0.0:8000` inside WSL2. Emulator reaches it via `10.0.2.2`;
-  a physical device needs the Windows portproxy + firewall rule (see `server/README.md`)
-  and the app's server URL set to the Windows LAN IP.
+  a physical device needs the Windows portproxy + firewall rule — run
+  `server/deploy/lan-proxy.ps1` (elevated PowerShell), which targets the **current
+  WSL2 IP** (re-run after a reboot / `wsl --shutdown`; forwarding to `127.0.0.1`
+  does not work on this host) — and the app's server URL set to the Windows LAN IP
+  (now `https://`).
+- **HTTPS/TLS**: `server/deploy/gen-cert.sh` writes a self-signed cert to
+  `server/deploy/tls/` (gitignored) with SANs for `localhost`/`10.0.2.2`/the host
+  LAN IPs, and copies the public cert to `app/src/main/res/raw/mydroiddeck_server.pem`.
+  `MYDROIDDECK_SSL_CERTFILE`/`_SSL_KEYFILE` in `server/.env` make `start.sh` serve
+  HTTPS; the app trusts that cert via `network_security_config.xml`. Re-run the
+  script and rebuild the app if the LAN IP changes.
 - App install on a connected device (Windows paths needed for `adb.exe`):
   `cmd.exe /c 'C:\desenv\Android\Sdk\platform-tools\adb.exe install -r C:\Desenv\_Projetos\IA\MyDroidDeck\app\build\outputs\apk\debug\MyDroidDeck-debug.apk'`
-- The cleartext network config is broad for LAN dev; harden before any public exposure.
+- The app's cleartext network config stays broad for LAN dev (and trusts the dev
+  TLS cert); harden before any public exposure.
 - Button actions execute **Windows executables** configured in `/admin/actions`
   (server → `powershell.exe Start-Process`, WSL interop). Only configured bindings
   run; anything else returns `status:"unknown"`. `POST /admin/actions/examples`
@@ -83,9 +93,9 @@ stores profiles and dispatches commands. Scaffolds for both exist and build gree
 
 ## Open decisions
 - `server/` auth: the admin HTML UI uses a **login + signed session cookie**
-  (`MYDROIDDECK_ADMIN_*`); the JSON REST API uses per-device bearer tokens. Neither
-  is TLS-protected yet — keep the server on a trusted LAN and set non-default admin
-  credentials in `server/.env` before exposing it.
+  (`MYDROIDDECK_ADMIN_*`); the JSON REST API uses per-device bearer tokens. TLS is
+  available (self-signed dev cert, `MYDROIDDECK_SSL_*`), so enable it on any network
+  you don't fully trust and set non-default admin credentials in `server/.env`.
 
 ## Assets & reusable code
 Free / permissively-licensed assets and open-source repos, with their licenses, are

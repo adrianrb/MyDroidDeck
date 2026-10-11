@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     supported_locales: tuple[str, ...] = ("pt_BR", "en")
     database_url: str = "sqlite:///./mydroiddeck.db"
     # Shared secret that authorizes new device pairing (entered once in the app).
-    # Replace before shipping; the admin UI itself is not authenticated yet.
+    # Replace before shipping; the admin UI has its own login (MYDROIDDECK_ADMIN_*).
     pairing_code: str = "pair-dev"
     # How a dispatched action is executed on the host: "wsl" launches Windows
     # executables through WSL interop (powershell.exe + Start-Process); "dry-run"
@@ -32,6 +32,16 @@ class Settings(BaseSettings):
     # Signs the admin session cookie; set a stable random value in .env.
     admin_secret_key: str = "change-me"
     admin_session_seconds: int = 12 * 60 * 60
+    # TLS for the uvicorn listener. Set both (paths relative to server/) to serve
+    # HTTPS; deploy/start.sh forwards them as --ssl-keyfile/--ssl-certfile.
+    # Generate a certificate with deploy/gen-cert.sh.
+    ssl_certfile: str = ""
+    ssl_keyfile: str = ""
+
+    @property
+    def tls_enabled(self) -> bool:
+        """True when both halves of the certificate are configured."""
+        return bool(self.ssl_certfile and self.ssl_keyfile)
 
 
 settings = Settings()

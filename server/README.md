@@ -16,6 +16,14 @@ python3 -m venv .venv
 .venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+Para HTTPS em desenvolvimento, gere um certificado e aponte o uvicorn para ele:
+
+```bash
+deploy/gen-cert.sh
+.venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 \
+    --ssl-keyfile deploy/tls/key.pem --ssl-certfile deploy/tls/cert.pem
+```
+
 Endpoints:
 
 - `GET /health`, `GET /version` (public)
@@ -59,6 +67,36 @@ Gere o segredo com:
   servidor registra um **aviso no log** ao iniciar.
 - A API REST continua usando **token por dispositivo** (`Authorization: Bearer`),
   independente deste login.
+
+## TLS (HTTPS)
+
+O listener do uvicorn pode servir **HTTPS**. Gere um certificado **auto-assinado**
+de desenvolvimento (que também é copiado para o app Android confiar nele):
+
+```bash
+deploy/gen-cert.sh
+```
+
+O script cria `deploy/tls/{cert,key}.pem` (gitignored) com SANs para `localhost`,
+`127.0.0.1`, `10.0.2.2` (emulador) e cada IPv4 não-WSL do host Windows (ex.:
+`192.168.100.7`), e copia o **certificado público** para
+`app/src/main/res/raw/mydroiddeck_server.pem`. Habilite no `.env`:
+
+```bash
+MYDROIDDECK_SSL_CERTFILE=deploy/tls/cert.pem
+MYDROIDDECK_SSL_KEYFILE=deploy/tls/key.pem
+```
+
+`deploy/start.sh` repassa esses caminhos ao uvicorn (`--ssl-certfile`/`--ssl-keyfile`),
+então o servidor passa a responder em `https://…:8000`. Sem essas variáveis ele
+continua em HTTP. `deploy/status.sh` detecta o esquema automaticamente.
+
+- Se o **IP da LAN mudar**, rode `deploy/gen-cert.sh` de novo e **rebuilde o app**
+  (o certificado antigo deixa de bater com os SANs).
+- No **navegador** do PC o aviso de certificado é esperado (auto-assinado); aceite
+  ou instale `deploy/tls/cert.pem` como confiável no Windows.
+- O app Android já confia nele via
+  [network_security_config](app/src/main/res/xml/network_security_config.xml).
 
 ## Ações → executáveis do Windows
 
@@ -106,19 +144,34 @@ deploy/stop.sh     # para o processo registrado
 
 ### Acesso a partir de outros aparelhos (LAN)
 
-O servidor escuta em `0.0.0.0` **dentro do WSL2**. O emulador Android alcança o
-host via `10.0.2.2` (localhost forwarding automático). Para um aparelho físico na
-LAN, é preciso rotear a porta no Windows (uma única vez, como **admin**):
+O servidor escuta em `0.0.0.0` **dentro do WSL2** (endereço NAT `172.x`, só
+alcançável a partir do Windows). O emulador Android alcança o host via `10.0.2.2`
+(encaminhamento automático de localhost). Para um aparelho físico na LAN, crie um
+**portproxy** no Windows apontando para o **IP atual do WSL2** + a regra de
+firewall. O script faz isso (rode em **PowerShell como administrador**):
+
+```powershell
+deploy\lan-proxy.ps1
+```
+
+Equivalente manual (`<wsl-ip>` = saída de `wsl hostname -I`):
 
 ```bat
-netsh interface portproxy add v4tov4 listenport=8000 listenaddress=0.0.0.0 connectport=8000 connectaddress=127.0.0.1
+netsh interface portproxy delete v4tov4 listenport=8000 listenaddress=0.0.0.0
+netsh interface portproxy add v4tov4 listenport=8000 listenaddress=0.0.0.0 connectport=8000 connectaddress=<wsl-ip>
 netsh advfirewall firewall add rule name="MyDroidDeck 8000" dir=in action=allow protocol=TCP localport=8000
 ```
 
-No app (tela de pareamento), informe `http://<ip-lan-do-windows>:8000/`
-(ex.: `http://192.168.100.7:8000/`) e o código de pareamento.
+> ⚠️ O IP do WSL2 **muda** a cada reinício do Windows ou `wsl --shutdown`; rode o
+> script de novo nesse caso. (Encaminhar para `127.0.0.1` não funciona aqui, porque
+> o forwarder de localhost do WSL2 não está ativo nesta máquina.)
+
+No app (tela de pareamento), informe `https://<ip-lan-do-windows>:8000/`
+(ex.: `https://192.168.100.7:8000/`) e o código de pareamento. O app confia no
+certificado auto-assinado de `deploy/gen-cert.sh` (veja **TLS** acima).
 
 > ⚠️ O admin HTML (`/admin/devices`, `/admin/actions`) mostra o código de pareamento
 > e permite **cadastrar executáveis que o servidor lança no Windows**. Ele **exige
-> login** (`MYDROIDDECK_ADMIN_*`), mas **não usa HTTPS** — mantenha em LAN confiável
-> e troque as credenciais padrão antes de expor.
+> login** (`MYDROIDDECK_ADMIN_*`) e pode servir **HTTPS** (`deploy/gen-cert.sh` +
+> `MYDROIDDECK_SSL_*`), mas o certificado é **auto-assinado** — mantenha em LAN
+> confiável e troque as credenciais padrão antes de expor.

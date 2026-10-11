@@ -31,11 +31,20 @@ fi
 
 mkdir -p "$ROOT/deploy" "$ROOT/data"
 
+# Serve HTTPS when a certificate is configured (see deploy/gen-cert.sh).
+TLS_ARGS=()
+SCHEME="http"
+if [ -n "${MYDROIDDECK_SSL_CERTFILE:-}" ] && [ -n "${MYDROIDDECK_SSL_KEYFILE:-}" ]; then
+    TLS_ARGS=(--ssl-keyfile "$MYDROIDDECK_SSL_KEYFILE" --ssl-certfile "$MYDROIDDECK_SSL_CERTFILE")
+    SCHEME="https"
+fi
+
 setsid nohup .venv/bin/uvicorn app.main:app --host "$HOST" --port "$PORT" \
+    ${TLS_ARGS[@]+"${TLS_ARGS[@]}"} \
     >> "$LOG" 2>&1 < /dev/null &
 echo $! > "$PIDFILE"
 
-echo "MyDroidDeck no ar: http://$HOST:$PORT"
+echo "MyDroidDeck no ar: $SCHEME://$HOST:$PORT"
 echo "  log : $LOG"
 echo "  pid : $(cat "$PIDFILE")"
 echo "  parar: deploy/stop.sh"
