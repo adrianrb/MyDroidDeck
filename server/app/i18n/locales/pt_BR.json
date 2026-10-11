@@ -40,5 +40,7 @@
   "admin.login": "Entrar",
   "admin.logout": "Sair",
   "admin.import_examples": "Importar exemplos",
-  "admin.imported": "Ações de exemplo importadas (duplicadas foram ignoradas)."
+  "admin.imported": "Ações de exemplo importadas (duplicadas foram ignoradas).",
+  "admin.fill_actions": "Preencher com ações padrão",
+  "admin.fill_actions_hint": "Adiciona um botão para cada ação cadastrada (as já existentes são mantidas)."
 }

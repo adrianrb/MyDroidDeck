@@ -11,6 +11,10 @@ os.environ["MYDROIDDECK_DATABASE_URL"] = (
 # Never launch real Windows programs from tests: record the attempt only.
 os.environ["MYDROIDDECK_EXEC_ENGINE"] = "dry-run"
 
+# Keep the extracted-icon cache out of the working tree (tests must not depend on,
+# nor pollute, the developer's cache).
+os.environ["MYDROIDDECK_ICON_CACHE_DIR"] = tempfile.mkdtemp(prefix="mydroiddeck-icons-")
+
 # Hermetic runs: a developer's .env must not change what the tests assert.
 os.environ["MYDROIDDECK_PAIRING_CODE"] = "pair-dev"
 os.environ["MYDROIDDECK_ADMIN_USER"] = "admin"

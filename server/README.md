@@ -28,11 +28,13 @@ Endpoints:
 
 - `GET /health`, `GET /version` (public)
 - `POST /pair` — exchange the shared pairing code for a per-device token (public)
-- `GET|POST /profiles`, `GET /profiles/{id}`, `DELETE /profiles/{id}`, `POST /actions`
+- `GET|POST /profiles`, `GET /profiles/{id}`, `DELETE /profiles/{id}`, `POST /actions`,
+  `GET /icon?action=<chave>`
   — protected: send `Authorization: Bearer <token>` from `/pair`
 - `GET /admin/profiles`, `GET|POST /admin/profiles/…`, `GET /admin/devices`,
   `POST /admin/devices/{id}/revoke`, `GET|POST /admin/actions`,
-  `POST /admin/actions/{id}/delete`, `POST /admin/actions/examples`
+  `POST /admin/actions/{id}/delete`, `POST /admin/actions/examples`,
+  `POST /admin/profiles/{id}/examples`
   — server-rendered admin UI, **requires login** (see below)
 
 Config is overridable with `MYDROIDDECK_*` env vars (see `app/core/config.py`);
@@ -129,6 +131,28 @@ existem (idempotente). Já vêm prontos: Bloco de Notas, Calculadora, Paint,
 Explorador, Gerenciador de Tarefas, **kiTTY portable**
 (`C:\Desenv\Util\kiTTY-PuTTY-auto-reconnect\kitty_portable-0.74.0.4.exe`) e dois
 modelos (OBS Studio e um `.bat`) — ajuste os caminhos desses dois na sua máquina.
+
+O botão **Preencher com ações padrão** em `/admin/profiles`
+(`POST /admin/profiles/{id}/examples`) cria **um botão por ação cadastrada** no
+perfil, pulando as que ele já tem (idempotente). Rótulo do botão = chave da ação.
+
+### Ícones dos botões (ícones reais dos apps)
+
+O app desenha no botão o **ícone real do programa** mapeado: `GET /icon?action=<chave>`
+(resposta autenticada `image/png`; `404` quando a ação não existe ou o programa não
+tem ícone — aí o botão fica só com o rótulo). O servidor extrai o ícone do
+executável com `[System.Drawing.Icon]::ExtractAssociatedIcon` via interop do WSL e
+devolve o PNG em **base64 pelo stdout** (não depende de caminho compartilhado):
+
+- Cache em `MYDROIDDECK_ICON_CACHE_DIR` (padrão `./data/icons`, um PNG por
+  executável) — a extração acontece uma vez por programa.
+- Apps da Store (Paint no Windows 11) são resolvidos pelo alias em
+  `%LOCALAPPDATA%\Microsoft\WindowsApps` quando o nome não está no PATH.
+- Os ícones são pré-aquecidos em **background task** ao cadastrar um binding,
+  importar exemplos e preencher um perfil — o primeiro carregamento do deck já
+  encontra tudo em cache.
+- Com `MYDROIDDECK_EXEC_ENGINE=dry-run` (testes) nada é extraído: `/icon` responde
+  404.
 
 ## Deploy (neste host — WSL, sem systemd/Docker)
 

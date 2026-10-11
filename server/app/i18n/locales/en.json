@@ -40,5 +40,7 @@
   "admin.login": "Sign in",
   "admin.logout": "Sign out",
   "admin.import_examples": "Import examples",
-  "admin.imported": "Example actions imported (duplicates were skipped)."
+  "admin.imported": "Example actions imported (duplicates were skipped).",
+  "admin.fill_actions": "Fill with standard actions",
+  "admin.fill_actions_hint": "Adds one button per registered action (existing ones are kept)."
 }

@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     # Generate a certificate with deploy/gen-cert.sh.
     ssl_certfile: str = ""
     ssl_keyfile: str = ""
+    # Where the extracted app icons (PNG, one per bound executable) are cached.
+    icon_cache_dir: str = "./data/icons"
 
     @property
     def tls_enabled(self) -> bool:

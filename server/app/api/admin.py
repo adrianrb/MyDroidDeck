@@ -13,6 +13,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from starlette.background import BackgroundTask
 
 from app.core.action_examples import load_examples
 from app.core.admin_auth import (
@@ -22,6 +23,7 @@ from app.core.admin_auth import (
     verify_credentials,
 )
 from app.core.config import settings
+from app.core.icons import prewarm_icons
 from app.db.session import get_session
 from app.i18n.translator import negotiate, translate
 from app.models.action import ActionBinding
@@ -152,6 +154,53 @@ def delete_profile(
     return RedirectResponse(url="/admin/profiles", status_code=303)
 
 
+@router.post("/profiles/{profile_id}/examples")
+def fill_profile_with_actions(
+    profile_id: int, session: Session = Depends(get_session)
+) -> RedirectResponse:
+    """Add one button per standard action to ``profile_id`` (idempotent).
+
+    The standard actions are the bindings registered in ``/admin/actions`` (seed
+    them with "Importar exemplos"); a button already pointing at an action is kept
+    untouched, so the route can be re-run safely to pick up new bindings.
+    """
+    profile = session.get(Profile, profile_id)
+    if profile is not None:
+        used = {button.action for button in profile.buttons}
+        next_index = max((button.index for button in profile.buttons), default=-1) + 1
+        for binding in session.scalars(select(ActionBinding).order_by(ActionBinding.id)):
+            if binding.action in used:
+                continue
+            profile.buttons.append(
+                Button(index=next_index, label=binding.action, action=binding.action)
+            )
+            used.add(binding.action)
+            next_index += 1
+        session.commit()
+        # Warm the icons in the background so the deck's first load is instant.
+        warm = [button.action for button in profile.buttons]
+        return RedirectResponse(
+            url="/admin/profiles",
+            status_code=303,
+            background=BackgroundTask(_warm_actions, warm),
+        )
+    return RedirectResponse(url="/admin/profiles", status_code=303)
+
+
+def _warm_actions(actions: list[str]) -> None:
+    """Extract the icons of the executables bound to ``actions`` (best effort)."""
+    from app.db.session import SessionLocal
+
+    with SessionLocal() as session:
+        executables = [
+            binding.executable
+            for binding in session.scalars(
+                select(ActionBinding).where(ActionBinding.action.in_(actions))
+            )
+        ]
+    prewarm_icons(executables)
+
+
 @router.get("/devices", response_class=HTMLResponse)
 def list_devices(request: Request, session: Session = Depends(get_session)):
     devices = list(session.scalars(select(Device).order_by(Device.id.desc())))
@@ -211,7 +260,13 @@ def import_example_actions(
         )
         existing.add(action)
     session.commit()
-    return RedirectResponse(url="/admin/actions?imported=1", status_code=303)
+    # Extract the icon of every binding in the background (once per program).
+    warm = list(session.scalars(select(ActionBinding.executable)))
+    return RedirectResponse(
+        url="/admin/actions?imported=1",
+        status_code=303,
+        background=BackgroundTask(prewarm_icons, warm),
+    )
 
 
 @router.get("/actions/new", response_class=HTMLResponse)
@@ -250,7 +305,12 @@ def create_action(
         )
     )
     session.commit()
-    return RedirectResponse(url="/admin/actions", status_code=303)
+    # The deck draws the program's real icon: extract it once, in the background.
+    return RedirectResponse(
+        url="/admin/actions",
+        status_code=303,
+        background=BackgroundTask(prewarm_icons, [executable.strip()]),
+    )
 
 
 @router.post("/actions/{action_id}/delete")

@@ -20,6 +20,9 @@
             <td>{{ profile.locale }}</td>
             <td>{{ profile.buttons | length }}</td>
             <td>
+                <form method="post" action="/admin/profiles/{{ profile.id }}/examples">
+                    <button type="submit">{{ t("admin.fill_actions") }}</button>
+                </form>
                 <form method="post" action="/admin/profiles/{{ profile.id }}/delete">
                     <button type="submit" class="danger">{{ t("admin.delete") }}</button>
                 </form>
