@@ -1,0 +1,6 @@
+{
+  "health.ok": "Healthy",
+  "error.profile_not_found": "Profile not found.",
+  "error.profile_exists": "A profile with that name already exists.",
+  "error.invalid_payload": "Invalid payload."
+}

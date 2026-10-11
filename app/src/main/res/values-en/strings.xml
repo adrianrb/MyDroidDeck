@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MyDroidDeck</string>
+    <string name="status_ready">Ready.</string>
+    <string name="status_last_action">Last action: %1$s</string>
+    <string name="button_default_label">Button %1$d</string>
+</resources>

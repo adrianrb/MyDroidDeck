@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Compose draws the UI; this framework theme only styles the window. -->
+<resources>
+    <style name="Theme.MyDroidDeck" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Default locale: pt-BR (values-en holds the English overrides). -->
+<resources>
+    <string name="app_name">MyDroidDeck</string>
+    <string name="status_ready">Pronto.</string>
+    <string name="status_last_action">Última ação: %1$s</string>
+    <string name="button_default_label">Botão %1$d</string>
+</resources>
