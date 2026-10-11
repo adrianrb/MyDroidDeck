@@ -16,9 +16,9 @@ class Settings(BaseSettings):
     default_locale: str = "pt_BR"
     supported_locales: tuple[str, ...] = ("pt_BR", "en")
     database_url: str = "sqlite:///./mydroiddeck.db"
-    # Shared secret for app/server auth. Auth/pairing model is still open; replace
-    # with a real flow before shipping. Not enforced by the REST API yet.
-    auth_token: str = "dev-token"
+    # Shared secret that authorizes new device pairing (entered once in the app).
+    # Replace before shipping; the admin UI itself is not authenticated yet.
+    pairing_code: str = "pair-dev"
 
 
 settings = Settings()

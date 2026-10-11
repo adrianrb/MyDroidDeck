@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app import __version__
-from app.api import actions, admin, health, profiles
+from app.api import actions, admin, health, pairing, profiles
 from app.db.session import Base, engine
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -27,6 +27,7 @@ def create_app() -> FastAPI:
         "/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static"
     )
     application.include_router(health.router)
+    application.include_router(pairing.router)
     application.include_router(profiles.router)
     application.include_router(actions.router)
     application.include_router(admin.router)

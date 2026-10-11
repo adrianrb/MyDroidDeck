@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="muted">{{ t("admin.pairing_hint") }} <code>{{ pairing_code }}</code></p>
+{% if devices %}
+<table>
+    <thead>
+        <tr>
+            <th>{{ t("admin.name") }}</th>
+            <th>{{ t("admin.paired_at") }}</th>
+            <th>{{ t("admin.status") }}</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for device in devices %}
+        <tr class="{{ 'revoked' if device.revoked }}">
+            <td>{{ device.name }}</td>
+            <td>{{ device.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>{{ t("admin.revoked") if device.revoked else t("admin.active") }}</td>
+            <td>
+                {% if not device.revoked %}
+                <form method="post" action="/admin/devices/{{ device.id }}/revoke">
+                    <button type="submit" class="danger">{{ t("admin.revoke") }}</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="muted">{{ t("admin.no_devices") }}</p>
+{% endif %}
+{% endblock %}

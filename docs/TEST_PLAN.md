@@ -29,6 +29,12 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | S-12 | Admin creates a profile via HTML form | 303 redirect; profile persisted | ✅ `test_admin.py` |
 | S-13 | Admin form rejects a duplicate name | 409 with a localized message | ✅ `test_admin.py` |
 | S-14 | Admin UI localized | pt-BR default; `Accept-Language: en` English | ✅ `test_admin.py` |
+| S-15 | Pair with the correct code | 200 + token + device id | ✅ `test_pairing.py` |
+| S-16 | Pair with a wrong code | 401, localized message | ✅ `test_pairing.py` |
+| S-17 | Re-pairing rotates the token | Old token 401, new token works | ✅ `test_pairing.py` |
+| S-18 | Protected REST without a token | 401 for `/profiles` and `/actions` | ✅ `test_pairing.py` |
+| S-19 | Revoked device token | 401 after admin revoke (covers E-03) | ✅ `test_pairing.py` |
+| S-20 | Admin lists and revokes devices | Devices page shows paired device; revoke works | ✅ `test_admin.py` |
 
 ## Android app (unit / instrumentation)
 | ID | Case | Expected |
@@ -59,8 +65,10 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | N-03 | i18n completeness | No missing keys in any shipped locale (fail build on gap) |
 | N-04 | License attribution | Third-party assets/deps recorded (`docs/FREE_RESOURCES.md`) |
 
-## Notes
-- Transport is **REST** (decided): the app `POST`s actions to `/actions`. Auth/pairing
-  (token format, expiry) is still open and gates E-01/E-03.
+- Transport is **REST** (decided): the app `POST`s actions to `/actions`. Device
+  pairing is implemented (shared `pairing_code` → per-device bearer token, S-15…S-20);
+  the admin HTML UI is not authenticated yet (open).
 - The admin UI is server-rendered **Jinja** (decided); its tests assert on localized
-  HTML output (S-11…S-14).
+  HTML output (S-11…S-14, S-20).
+- E-01 (pair device) is implemented via the pairing code; E-03 (revoked token) is
+  covered by S-19.

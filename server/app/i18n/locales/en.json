@@ -3,7 +3,11 @@
   "error.profile_not_found": "Profile not found.",
   "error.profile_exists": "A profile with that name already exists.",
   "error.invalid_payload": "Invalid payload.",
+  "error.unauthorized": "Unauthorized. Pair the device again.",
+  "error.invalid_pairing_code": "Invalid pairing code.",
   "admin.title": "MyDroidDeck — Admin",
+  "admin.profiles": "Profiles",
+  "admin.devices": "Devices",
   "admin.new_profile": "New profile",
   "admin.name": "Name",
   "admin.locale": "Locale",
@@ -11,5 +15,12 @@
   "admin.buttons_hint": "Buttons (one per line: label|action)",
   "admin.delete": "Delete",
   "admin.save": "Save",
-  "admin.empty": "No profiles yet."
+  "admin.empty": "No profiles yet.",
+  "admin.pairing_hint": "Pairing code (enter it in the app):",
+  "admin.paired_at": "Paired at",
+  "admin.status": "Status",
+  "admin.active": "Active",
+  "admin.revoked": "Revoked",
+  "admin.revoke": "Revoke",
+  "admin.no_devices": "No paired devices yet."
 }

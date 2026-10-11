@@ -47,16 +47,20 @@ stores profiles and dispatches commands. Scaffolds for both exist and build gree
 
 ## Layout
 - `server/` — FastAPI app in `server/app/` (`api/` routers, `models/` ORM,
-  `schemas/` Pydantic, `templates/` + `static/` Jinja admin UI,
-  `i18n/locales/*.json` catalogs); pytest in `server/tests/`. Use the
-  `server/.venv` virtualenv (`./.venv/bin/pytest`).
+  `schemas/` Pydantic, `core/security.py` token auth + `api/pairing.py`,
+  `templates/` + `static/` Jinja admin UI, `i18n/locales/*.json` catalogs);
+  pytest in `server/tests/`. Use the `server/.venv` virtualenv
+  (`./.venv/bin/pytest`). Dev pairing code: `pair-dev`
+  (`MYDROIDDECK_PAIRING_CODE`).
 - `app/` — Android Gradle project (Kotlin + Compose). Sources in
   `app/src/main/java/com/mydroiddeck/app/` (`ui/` screens, `ui/theme/`, `model/`,
   `net/`); `res/values/` is pt-BR (default), `res/values-en/` English. Run
   `gradlew-win.bat test` (or `./gradlew test` on Windows).
 
 ## Open decisions
-- `server/`: auth/pairing model between the app and the server.
+- `server/`: the admin HTML UI is **not authenticated yet** — device tokens protect
+  only the JSON REST API (`/profiles`, `/actions`); pairing uses a shared
+  `pairing_code` + per-device tokens.
 
 ## Assets & reusable code
 Free / permissively-licensed assets and open-source repos, with their licenses, are

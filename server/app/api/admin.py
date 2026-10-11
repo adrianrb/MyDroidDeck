@@ -14,8 +14,10 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.db.session import get_session
 from app.i18n.translator import negotiate, translate
+from app.models.device import Device
 from app.models.profile import Button, Profile
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -98,3 +100,28 @@ def delete_profile(
         session.delete(profile)
         session.commit()
     return RedirectResponse(url="/admin/profiles", status_code=303)
+
+
+@router.get("/devices", response_class=HTMLResponse)
+def list_devices(request: Request, session: Session = Depends(get_session)):
+    devices = list(session.scalars(select(Device).order_by(Device.id.desc())))
+    return templates.TemplateResponse(
+        request=request,
+        name="devices/list.html",
+        context={
+            **_base_context(request),
+            "devices": devices,
+            "pairing_code": settings.pairing_code,
+        },
+    )
+
+
+@router.post("/devices/{device_id}/revoke")
+def revoke_device(
+    device_id: int, session: Session = Depends(get_session)
+) -> RedirectResponse:
+    device = session.get(Device, device_id)
+    if device is not None:
+        device.revoked = True
+        session.commit()
+    return RedirectResponse(url="/admin/devices", status_code=303)

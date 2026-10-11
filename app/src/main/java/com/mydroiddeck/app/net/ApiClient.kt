@@ -16,6 +16,18 @@ object ApiClient {
             level = HttpLoggingInterceptor.Level.BASIC
         }
         val httpClient = OkHttpClient.Builder()
+            // Attach the pairing token to every REST call once one is stored.
+            .addInterceptor { chain ->
+                val token = TokenStore.token
+                val request = if (token.isNullOrBlank()) {
+                    chain.request()
+                } else {
+                    chain.request().newBuilder()
+                        .header("Authorization", "Bearer $token")
+                        .build()
+                }
+                chain.proceed(request)
+            }
             .addInterceptor(logging)
             .build()
         Retrofit.Builder()

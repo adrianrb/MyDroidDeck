@@ -3,7 +3,11 @@
   "error.profile_not_found": "Perfil não encontrado.",
   "error.profile_exists": "Já existe um perfil com esse nome.",
   "error.invalid_payload": "Dados inválidos.",
+  "error.unauthorized": "Não autorizado. Pareie o dispositivo novamente.",
+  "error.invalid_pairing_code": "Código de pareamento inválido.",
   "admin.title": "MyDroidDeck — Administração",
+  "admin.profiles": "Perfis",
+  "admin.devices": "Dispositivos",
   "admin.new_profile": "Novo perfil",
   "admin.name": "Nome",
   "admin.locale": "Idioma",
@@ -11,5 +15,12 @@
   "admin.buttons_hint": "Botões (um por linha: rótulo|ação)",
   "admin.delete": "Excluir",
   "admin.save": "Salvar",
-  "admin.empty": "Nenhum perfil cadastrado ainda."
+  "admin.empty": "Nenhum perfil cadastrado ainda.",
+  "admin.pairing_hint": "Código de pareamento (informe no app):",
+  "admin.paired_at": "Pareado em",
+  "admin.status": "Situação",
+  "admin.active": "Ativo",
+  "admin.revoked": "Revogado",
+  "admin.revoke": "Revogar",
+  "admin.no_devices": "Nenhum dispositivo pareado ainda."
 }

@@ -37,3 +37,14 @@ def test_admin_ui_is_localized(client):
     assert "Administração" in client.get("/admin/profiles").text
     english = client.get("/admin/profiles", headers={"Accept-Language": "en"})
     assert "Admin" in english.text
+
+
+def test_admin_lists_and_revokes_devices(client):
+    # The `client` fixture paired device "pytest" (first row on the fresh DB).
+    listing = client.get("/admin/devices")
+    assert listing.status_code == 200
+    assert "pytest" in listing.text
+    assert "pair-dev" in listing.text  # pairing code hint
+
+    client.post("/admin/devices/1/revoke")
+    assert "Revogado" in client.get("/admin/devices").text

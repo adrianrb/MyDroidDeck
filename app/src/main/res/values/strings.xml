@@ -5,4 +5,10 @@
     <string name="status_ready">Pronto.</string>
     <string name="status_last_action">Última ação: %1$s</string>
     <string name="button_default_label">Botão %1$d</string>
+    <string name="pairing_title">Parear com o servidor</string>
+    <string name="pairing_hint">Digite o código exibido na página de dispositivos do servidor (http://10.0.2.2:8000/admin/devices).</string>
+    <string name="pairing_code">Código</string>
+    <string name="pairing_device_name">Nome deste dispositivo</string>
+    <string name="pairing_action">Parear</string>
+    <string name="pairing_error">Falha ao parear. Verifique o código e se o servidor está acessível.</string>
 </resources>

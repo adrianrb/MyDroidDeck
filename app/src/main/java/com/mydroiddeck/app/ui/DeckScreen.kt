@@ -31,6 +31,7 @@ import com.mydroiddeck.app.model.DeckButton
 import com.mydroiddeck.app.net.ApiClient
 import com.mydroiddeck.app.ui.theme.MyDroidDeckTheme
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 private const val GRID_COLUMNS = 4
 private const val PLACEHOLDER_BUTTONS = 8
@@ -41,7 +42,10 @@ private fun placeholderButtons(): List<DeckButton> =
     }
 
 @Composable
-fun DeckScreen(modifier: Modifier = Modifier) {
+fun DeckScreen(
+    onUnauthorized: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
     val buttons = remember { placeholderButtons() }
     var lastAction by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -59,9 +63,13 @@ fun DeckScreen(modifier: Modifier = Modifier) {
                 DeckButtonCard(label = label) {
                     lastAction = label
                     scope.launch {
-                        // REST dispatch; network failures are swallowed until UI states exist.
-                        runCatching {
+                        try {
                             ApiClient.api.dispatch(ActionRequest(button.action, label))
+                        } catch (e: HttpException) {
+                            // Revoked/expired token: drop it and re-pair.
+                            if (e.code() == 401) onUnauthorized()
+                        } catch (_: Exception) {
+                            // Server unreachable; keep the UI usable.
                         }
                     }
                 }

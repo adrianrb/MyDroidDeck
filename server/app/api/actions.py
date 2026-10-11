@@ -4,13 +4,16 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
 from pydantic import BaseModel
 
-router = APIRouter(tags=["actions"])
+from app.core.security import require_device
+
+router = APIRouter(tags=["actions"], dependencies=[Depends(require_device)])
 
 
-class ActionRequest(BaseModel):
+class ActionRequest(BaseModel):  # noqa: N999 - pydantic schema, not a model
     action: str
     label: str | None = None
 

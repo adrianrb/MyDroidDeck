@@ -6,12 +6,17 @@ from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.security import require_device
 from app.db.session import get_session
 from app.i18n.translator import negotiate, translate
 from app.models.profile import Button, Profile
 from app.schemas.profile import ProfileCreate, ProfileRead
 
-router = APIRouter(prefix="/profiles", tags=["profiles"])
+router = APIRouter(
+    prefix="/profiles",
+    tags=["profiles"],
+    dependencies=[Depends(require_device)],
+)
 
 
 @router.get("", response_model=list[ProfileRead])
