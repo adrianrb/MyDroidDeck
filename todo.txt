@@ -1,4 +1,10 @@
-Para o servidor, configure um instalador p/ Linux (e WSL) como segue:
-1. Detectar o ambiente e configurar a instalação (pré-requisitos, dependências etc.).
-2. Instalar na pasta 'home'
-3. Detectar se há uma GUI instalada e/ou executando e adicionar um atalho no desktop do usuário
+Server:
+    1. UI profissional
+    2. Perfis: Incluir, Editar, Excluir
+    3. Ações:
+        3.1 permitir escolher o ícone (default do app/exe)
+        3.2 permitir escolher o caminho do script/executável
+        3.3 permitir reordenar os botões/ações
+App:
+    1. Aumentar efeito glass 3D ("altura" do botão 3mm, afunda 2mm)
+    2. Permitir reordenar botões
