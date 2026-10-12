@@ -1,10 +1,4 @@
 Server:
-    1. UI profissional
-    2. Perfis: Incluir, Editar, Excluir
-    3. Ações:
-        3.1 permitir escolher o ícone (default do app/exe)
-        3.2 permitir escolher o caminho do script/executável
-        3.3 permitir reordenar os botões/ações
+    1. Desinstalador: oferecer para apagar todos os dados (pasta inteira)
 App:
-    1. Aumentar efeito glass 3D ("altura" do botão 3mm, afunda 2mm)
-    2. Permitir reordenar botões
+    
