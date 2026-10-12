@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -24,7 +24,13 @@ from app.core.admin_auth import (
     verify_credentials,
 )
 from app.core.config import settings
-from app.core.icons import prewarm_icons, resolve_icon
+from app.core.file_picker import pick_file
+from app.core.icons import (
+    invalidate_custom_icon,
+    invalidate_icon,
+    prewarm_icons,
+    resolve_icon,
+)
 from app.core.runtime_config import (
     RuntimeConfig,
     load_runtime_config,
@@ -557,9 +563,18 @@ def _new_action_sort_order(session: Session) -> int:
     return max(binding.sort_order for binding in ordered) + 1
 
 
-def _warm_choice(executable: str, icon: str) -> None:
-    """Extract the icon this action will serve (custom path or the exe), best effort."""
+def _warm_choice(executable: str, icon: str, refresh: bool = False) -> None:
+    """Extract the icon this action will serve (custom path or the exe), best effort.
+
+    With ``refresh`` the cached PNG is dropped first, so a changed executable (or a
+    freshly picked file) is re-read from disk and the deck receives the new icon.
+    """
     try:
+        if refresh:
+            if icon.strip():
+                invalidate_custom_icon(icon)
+            else:
+                invalidate_icon(executable)
         resolve_icon(executable, icon)
     except Exception:  # pragma: no cover - best effort, never breaks the request
         pass
@@ -619,16 +634,41 @@ def update_action(
         return templates.TemplateResponse(
             request=request, name="actions/form.html", context=context, status_code=409
         )
+    # A change to the program or the chosen icon invalidates the cached PNG, so the
+    # deck (and the admin preview) picks up the new icon instead of the stale one.
+    previous = (binding.executable or "", binding.icon or "")
     binding.action = action.strip()
     binding.executable = executable.strip()
     binding.args = args.strip()
     binding.icon = icon.strip() or None
     session.commit()
+    changed = (binding.executable, binding.icon or "") != previous
     return RedirectResponse(
         url="/admin/actions",
         status_code=303,
-        background=BackgroundTask(_warm_choice, executable.strip(), icon.strip()),
+        background=BackgroundTask(
+            _warm_choice, binding.executable, binding.icon or "", changed
+        ),
     )
+
+
+@router.post("/pick-file")
+def pick_file_dialog(request: Request, kind: str = "exe") -> JSONResponse:
+    """Open a native Windows file dialog and return the chosen path as JSON.
+
+    The server and the browser must be on the same computer (the usual local
+    install): the dialog opens on the Windows desktop and the picked path is handed
+    back to the form. Dismissing it (or running without a Windows host) answers
+    ``{"path": null}``, leaving the field as it was.
+    """
+    locale = negotiate(request.headers.get("accept-language"))
+    if kind == "icon":
+        title = translate("admin.pick_icon_title", locale)
+        filters = translate("admin.pick_icon_filter", locale)
+    else:
+        title = translate("admin.pick_exe_title", locale)
+        filters = translate("admin.pick_exe_filter", locale)
+    return JSONResponse({"path": pick_file(title, filters)})
 
 
 @router.post("/actions/{action_id}/move")
@@ -641,6 +681,20 @@ def move_action(
     _move_action(session, action_id, direction)
     session.commit()
     return RedirectResponse(url="/admin/actions", status_code=303)
+
+
+@router.get("/icon-preview")
+def icon_preview(executable: str = "", icon: str = "") -> FileResponse:
+    """Preview the icon a given ``executable``/``icon`` pair resolves to.
+
+    Lets the action form show the *picked* icon before saving (the saved binding is
+    previewed by ``GET /admin/actions/{id}/icon``). Answers 404 while nothing is
+    extractable — the same resolution the deck sees through ``GET /icon``.
+    """
+    resolved = resolve_icon(executable, icon)
+    if resolved is None:
+        raise HTTPException(status_code=404, detail="icon unavailable")
+    return FileResponse(resolved, media_type="image/png")
 
 
 @router.get("/actions/{action_id}/icon")

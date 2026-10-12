@@ -13,9 +13,14 @@
         <p class="muted small">{{ t("admin.action_hint") }}</p>
         <label>
             {{ t("admin.executable") }}
-            <input type="text" name="executable" required list="executable-suggestions"
-                   value="{{ binding.executable if binding else '' }}"
-                   placeholder="C:\Program Files\OBS Studio\bin\64bit\obs64.exe">
+            <span class="input-row">
+                <input type="text" name="executable" id="executable" required list="executable-suggestions"
+                       value="{{ binding.executable if binding else '' }}"
+                       placeholder="C:\Program Files\OBS Studio\bin\64bit\obs64.exe">
+                <button type="button" class="ghost" data-pick="exe" data-target="executable">
+                    {{ t("admin.pick_file") }}
+                </button>
+            </span>
             <datalist id="executable-suggestions">
                 <option value="notepad.exe">
                 <option value="calc.exe">
@@ -32,13 +37,66 @@
         </label>
         <label>
             {{ t("admin.custom_icon") }}
-            <input type="text" name="icon" value="{{ binding.icon if binding and binding.icon else '' }}"
-                   placeholder="C:\icons\meu-icone.ico">
-            {% if binding and binding.id %}<img class="icon-preview" src="/admin/actions/{{ binding.id }}/icon" alt="">{% endif %}
+            <span class="input-row">
+                <input type="text" name="icon" id="icon"
+                       value="{{ binding.icon if binding and binding.icon else '' }}"
+                       placeholder="C:\icons\meu-icone.ico">
+                <button type="button" class="ghost" data-pick="icon" data-target="icon">
+                    {{ t("admin.pick_file") }}
+                </button>
+            </span>
+            <img class="icon-preview" id="icon-preview" alt=""
+                 src="/admin/icon-preview?executable={{ (binding.executable if binding else '')|urlencode }}&amp;icon={{ (binding.icon if binding and binding.icon else '')|urlencode }}"
+                 onload="this.classList.remove('hidden')"
+                 onerror="this.classList.add('hidden')">
         </label>
         <p class="muted small">{{ t("admin.custom_icon_hint") }}</p>
+        <p class="muted small">{{ t("admin.pick_hint") }}</p>
         <button type="submit">{{ t("admin.save") }}</button>
         <a class="button ghost" href="/admin/actions">{{ t("admin.cancel") }}</a>
     </form>
 </div>
+<script>
+    // "Procurar…" asks the *server* (same machine) to open a native Windows file
+    // dialog and drops the chosen path into the matching text field. The icon
+    // preview follows the current field values, so a freshly picked file shows up.
+    (function () {
+        var executable = document.getElementById("executable");
+        var icon = document.getElementById("icon");
+        var preview = document.getElementById("icon-preview");
+
+        function updatePreview() {
+            if (!preview) { return; }
+            var query = "?executable=" + encodeURIComponent(executable.value) +
+                "&icon=" + encodeURIComponent(icon.value) + "&t=" + Date.now();
+            preview.classList.remove("hidden");
+            preview.src = "/admin/icon-preview" + query;
+        }
+
+        [executable, icon].forEach(function (field) {
+            if (field) { field.addEventListener("change", updatePreview); }
+        });
+
+        document.querySelectorAll("[data-pick]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                var target = document.getElementById(button.getAttribute("data-target"));
+                if (!target) { return; }
+                button.disabled = true;
+                fetch("/admin/pick-file?kind=" + encodeURIComponent(button.getAttribute("data-pick")), {
+                    method: "POST",
+                    headers: { "Accept": "application/json" },
+                })
+                    .then(function (response) { return response.ok ? response.json() : null; })
+                    .then(function (data) {
+                        if (data && data.path) {
+                            target.value = data.path;
+                            target.dispatchEvent(new Event("change", { bubbles: true }));
+                        }
+                    })
+                    .catch(function () {})
+                    .finally(function () { button.disabled = false; });
+            });
+        });
+    })();
+</script>
 {% endblock %}

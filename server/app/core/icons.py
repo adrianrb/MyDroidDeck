@@ -168,6 +168,21 @@ def custom_icon_cache_file(path: str) -> Path:
     return cache_dir() / f"custom-{digest}.png"
 
 
+def invalidate_icon(executable: str) -> None:
+    """Drop the cached PNG of ``executable`` so it is extracted again on demand.
+
+    Used when the admin rebinds an action to another program (or replaces the file
+    behind the same path): the deck must draw the *new* program's icon, not the
+    stale cached one.
+    """
+    icon_cache_file(executable).unlink(missing_ok=True)
+
+
+def invalidate_custom_icon(path: str) -> None:
+    """Drop the cached PNG of a user-chosen icon so a re-pick takes effect."""
+    custom_icon_cache_file(path).unlink(missing_ok=True)
+
+
 def extract_custom_icon(path: str) -> Path | None:
     """Return a cached PNG for a user-chosen icon path.
 

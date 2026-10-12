@@ -68,5 +68,11 @@
   "admin.icon": "Ícone",
   "admin.custom_icon": "Ícone personalizado (opcional)",
   "admin.custom_icon_hint": "Caminho de um .png, .ico ou executável com o ícone desejado. Vazio = ícone padrão do programa (do executável).",
+  "admin.pick_file": "Procurar…",
+  "admin.pick_hint": "A janela de seleção abre no computador onde o servidor está em execução; o caminho escolhido é preenchido no campo.",
+  "admin.pick_exe_title": "Selecione o executável",
+  "admin.pick_exe_filter": "Executáveis (*.exe;*.bat)|*.exe;*.bat|Todos os arquivos (*.*)|*.*",
+  "admin.pick_icon_title": "Selecione o ícone",
+  "admin.pick_icon_filter": "Ícones (*.ico;*.png;*.exe;*.dll)|*.ico;*.png;*.exe;*.dll|Todos os arquivos (*.*)|*.*",
   "admin.buttons_editor_hint": "Botões na ordem do deck. Arraste para reorganizar antes de salvar."
 }

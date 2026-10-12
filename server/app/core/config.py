@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     exec_engine: str = "wsl"
     # Bounds the PowerShell launcher call, not the launched program (which detaches).
     exec_timeout_seconds: int = 20
+    # Bounds how long the admin's native file dialog (Windows OpenFileDialog) may stay
+    # open while the user browses; the HTTP request blocks until it is dismissed.
+    file_dialog_timeout_seconds: int = 300
     # Login for the server-rendered admin UI (Jinja). CHANGE these before exposing
     # the server: the admin pages can register programs the host will execute.
     admin_user: str = "admin"

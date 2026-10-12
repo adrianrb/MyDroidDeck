@@ -283,3 +283,138 @@ def test_admin_missing_custom_icon_answers_404(admin_client):
     # dry-run: no Windows host for .ico extraction -> no icon to serve.
     assert admin_client.get("/admin/actions/1/icon").status_code == 404
     assert admin_client.get("/icon", params={"action": "sem.icone"}).status_code == 404
+
+
+def _create_action(admin_client, action="luz.mesa", executable="notepad.exe", **extra):
+    return admin_client.post(
+        "/admin/actions",
+        data={"action": action, "executable": executable, "args": "", **extra},
+        follow_redirects=False,
+    )
+
+
+def test_action_form_offers_file_pickers(admin_client):
+    _create_action(admin_client)
+    page = admin_client.get("/admin/actions/1/edit").text
+    # A "Browse…" button next to each path field, wired to the picker endpoint.
+    assert 'data-pick="exe" data-target="executable"' in page
+    assert 'data-pick="icon" data-target="icon"' in page
+    assert "/admin/pick-file" in page
+    assert "/admin/icon-preview" in page
+    # The text fields stay editable for LAN clients without a local desktop.
+    assert 'name="executable"' in page
+    assert 'name="icon"' in page
+
+
+def test_new_action_form_renders_with_pickers(admin_client):
+    page = admin_client.get("/admin/actions/new")
+    assert page.status_code == 200
+    assert 'data-pick="exe"' in page.text
+
+
+def test_admin_icon_preview_endpoint(admin_client, tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "icon_cache_dir", str(tmp_path))
+    custom = tmp_path / "preview.png"
+    custom.write_bytes(PNG_1X1)
+    # A chosen custom icon previews before the action is saved.
+    preview = admin_client.get("/admin/icon-preview", params={"icon": str(custom)})
+    assert preview.status_code == 200
+    assert preview.content[:8] == PNG_MAGIC
+    # dry-run: no Windows host to extract an executable's icon -> 404.
+    assert (
+        admin_client.get(
+            "/admin/icon-preview", params={"executable": "notepad.exe"}
+        ).status_code
+        == 404
+    )
+
+
+def test_admin_icon_preview_requires_login(anon_client):
+    response = anon_client.get("/admin/icon-preview", follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin/login"
+
+
+def test_admin_pick_file_returns_no_path_without_a_windows_host(admin_client):
+    # Tests run with MYDROIDDECK_EXEC_ENGINE=dry-run: never open a real dialog.
+    response = admin_client.post("/admin/pick-file", params={"kind": "exe"})
+    assert response.status_code == 200
+    assert response.json() == {"path": None}
+    assert admin_client.post(
+        "/admin/pick-file", params={"kind": "icon"}
+    ).json() == {"path": None}
+
+
+def test_admin_pick_file_requires_login(anon_client):
+    response = anon_client.post(
+        "/admin/pick-file", params={"kind": "exe"}, follow_redirects=False
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/admin/login"
+
+
+def test_picker_filters_cover_the_expected_types():
+    from app.i18n.translator import translate
+
+    exe_filter = translate("admin.pick_exe_filter", "pt_BR")
+    assert "*.exe" in exe_filter and "*.bat" in exe_filter and "*.*" in exe_filter
+    icon_filter = translate("admin.pick_icon_filter", "pt_BR")
+    assert "*.ico" in icon_filter and "*.png" in icon_filter
+
+
+def test_admin_editing_executable_refreshes_the_default_icon(admin_client, tmp_path, monkeypatch):
+    from app.core.icons import icon_cache_file
+
+    monkeypatch.setattr(settings, "icon_cache_dir", str(tmp_path))
+    _create_action(admin_client, executable="powershell.exe")
+    cached = icon_cache_file("notepad.exe")
+    cached.parent.mkdir(parents=True, exist_ok=True)
+    cached.write_bytes(PNG_1X1)
+    assert cached.is_file()
+
+    admin_client.post(
+        "/admin/actions/1",
+        data={"action": "luz.mesa", "executable": "notepad.exe", "args": ""},
+        follow_redirects=False,
+    )
+    # Rebinding the action to another program drops the stale PNG, so the deck
+    # re-reads the new program's icon on its next request.
+    assert not cached.is_file()
+
+
+def test_admin_saving_without_changing_the_executable_keeps_the_icon(
+    admin_client, tmp_path, monkeypatch
+):
+    from app.core.icons import icon_cache_file
+
+    monkeypatch.setattr(settings, "icon_cache_dir", str(tmp_path))
+    _create_action(admin_client, executable="notepad.exe")
+    cached = icon_cache_file("notepad.exe")
+    cached.parent.mkdir(parents=True, exist_ok=True)
+    cached.write_bytes(PNG_1X1)
+
+    admin_client.post(
+        "/admin/actions/1",
+        data={"action": "luz.mesa", "executable": "notepad.exe", "args": "-x"},
+        follow_redirects=False,
+    )
+    # Only args changed: the cached icon is left untouched (no re-extraction).
+    assert cached.is_file()
+
+
+def test_admin_changing_the_custom_icon_refreshes_it(admin_client, tmp_path, monkeypatch):
+    from app.core.icons import custom_icon_cache_file
+
+    monkeypatch.setattr(settings, "icon_cache_dir", str(tmp_path))
+    _create_action(admin_client, icon="C:\\icons\\um.ico")
+    cached = custom_icon_cache_file("C:\\icons\\dois.ico")
+    cached.parent.mkdir(parents=True, exist_ok=True)
+    cached.write_bytes(PNG_1X1)
+
+    admin_client.post(
+        "/admin/actions/1",
+        data={"action": "luz.mesa", "executable": "notepad.exe", "icon": "C:\\icons\\dois.ico"},
+        follow_redirects=False,
+    )
+    # dry-run cannot re-extract an .ico, so the dropped cache stays dropped.
+    assert not cached.is_file()

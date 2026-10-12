@@ -51,6 +51,8 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | S-34 | Admin edits an action + chooses its icon | Edit page prefilled; rebinding `executable`/`args` persists; a custom icon path (`.png`/`.ico`/`.exe`) is served by `GET /icon` and by the admin preview — empty means the executable's own icon; missing custom icon → 404 | ✅ `test_admin.py`, `test_icons.py` |
 | S-35 | Admin reorders actions | ↑/↓ move endpoints persist a dense `sort_order`; the actions list and the "fill profile" order follow it | ✅ `test_admin.py` |
 | S-36 | Professional admin UI (sidebar/cards) | Base layout restyled; pages render with the new chrome; mobile narrow layout; login is a standalone centered card | ✅ rendered by `test_admin.py` |
+| S-37 | Pick a path with the native Windows dialog (`/admin/pick-file`) | The action form offers "Browse…" next to the executable and the custom-icon fields; the endpoint returns the chosen path as JSON (`{"path": null}` when dismissed or without a Windows host) and sits behind the admin guard; the filter covers `.exe`/`.bat` and `.ico`/`.png`; the form previews the picked icon live via `/admin/icon-preview` | ✅ `test_admin.py`, `test_file_picker.py` |
+| S-38 | Rebinding an action refreshes its icon | Changing the executable (or the custom icon) drops the cached PNG so the deck/`GET /icon` re-extracts the new one; saving with no such change keeps the cache untouched | ✅ `test_admin.py` |
 
 ## Android app (unit / instrumentation)
 | ID | Case | Expected | Status |

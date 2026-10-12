@@ -68,5 +68,11 @@
   "admin.icon": "Icon",
   "admin.custom_icon": "Custom icon (optional)",
   "admin.custom_icon_hint": "Path to a .png, .ico or executable with the desired icon. Empty = the program's default icon (from the executable).",
+  "admin.pick_file": "Browse…",
+  "admin.pick_hint": "The file dialog opens on the computer running the server; the picked path is filled into the field.",
+  "admin.pick_exe_title": "Select the executable",
+  "admin.pick_exe_filter": "Executables (*.exe;*.bat)|*.exe;*.bat|All files (*.*)|*.*",
+  "admin.pick_icon_title": "Select the icon",
+  "admin.pick_icon_filter": "Icons (*.ico;*.png;*.exe;*.dll)|*.ico;*.png;*.exe;*.dll|All files (*.*)|*.*",
   "admin.buttons_editor_hint": "Buttons in deck order. Drag to rearrange before saving."
 }
