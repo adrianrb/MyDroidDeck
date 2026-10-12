@@ -42,5 +42,18 @@
   "admin.import_examples": "Importar exemplos",
   "admin.imported": "Ações de exemplo importadas (duplicadas foram ignoradas).",
   "admin.fill_actions": "Preencher com ações padrão",
-  "admin.fill_actions_hint": "Adiciona um botão para cada ação cadastrada (as já existentes são mantidas)."
+  "admin.fill_actions_hint": "Adiciona um botão para cada ação cadastrada (as já existentes são mantidas).",
+  "admin.config": "Configuração",
+  "admin.visible_on_network": "Visível na rede",
+  "admin.visible_on_network_hint": "Se desligado, o servidor escuta apenas neste computador (127.0.0.1). Ligue para liberar o acesso de outros aparelhos na LAN.",
+  "admin.port": "Porta",
+  "admin.start_on_logon": "Iniciar no logon do Windows",
+  "admin.config_saved": "Configuração salva.",
+  "admin.config_restarted": "Servidor reiniciando…",
+  "admin.config_restart_hint": "Alterações de rede/porta passam a valer após reiniciar o servidor.",
+  "admin.manage_profiles": "Gerenciar perfis",
+  "admin.manage_actions": "Gerenciar ações",
+  "admin.auth_disabled": "Login desativado (modo sem login).",
+  "admin.restart": "Reiniciar servidor",
+  "error.invalid_port": "Porta inválida (use um número entre 1 e 65535)."
 }

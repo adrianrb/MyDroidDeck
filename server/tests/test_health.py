@@ -17,6 +17,12 @@ def test_version_is_semver(client):
     assert re.fullmatch(r"\d+\.\d+\.\d+", response.json()["version"])
 
 
+def test_root_redirects_to_config(client):
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers["location"] == "/admin/config"
+
+
 def test_health_message_defaults_to_pt_br(client):
     assert client.get("/health").json()["message"] == "Operacional"
 

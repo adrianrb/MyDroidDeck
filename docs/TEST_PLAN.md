@@ -45,6 +45,7 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | S-28 | TLS configuration | `tls_enabled` needs both paths; `gen-cert.sh` yields an ssl-loadable cert with the expected SANs | ✅ `test_config.py` |
 | S-29 | Fill a profile with the standard actions | 303; one button per binding, idempotent, own buttons kept, sequential indexes | ✅ `test_profiles.py` |
 | S-30 | Button icons (`GET /icon?action=`) | Serves the extracted PNG; 404 for unknown action/no icon; device auth required; extracts from a real Windows executable and from a Store-app alias (live — skipped without a Windows host); cache is stable per executable | ✅ `test_icons.py` |
+| S-31 | Runtime settings (`/admin/config`) | Values persist to `data/runtime.json`; invalid port → 400; no-login mode opens the admin (login redirects to config) | ✅ `test_runtime_config.py`, `test_admin_config.py` |
 
 ## Android app (unit / instrumentation)
 | ID | Case | Expected | Status |
@@ -102,6 +103,11 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
   (S-30).
 - A profile can be populated with the standard actions from the admin UI, one button
   per registered binding (S-29).
+- The installers (`setup/`) run the server through `server/launch.py`, which reads
+  the mutable `data/runtime.json` (network visibility, port, logon) edited on
+  `/admin/config`; the Windows fork disables the admin login
+  (`MYDROIDDECK_ADMIN_AUTH_ENABLED=false`) and defaults to port 56997 over HTTP
+  (S-31).
 
 ## Device verification (manual, physical device `0084173849`)
 

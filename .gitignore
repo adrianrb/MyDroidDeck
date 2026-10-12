@@ -18,3 +18,7 @@ build/
 local.properties
 *.apk
 *.aab
+
+# Installer build output (setup/build-offline.sh staging + Inno Setup output)
+setup/build/
+

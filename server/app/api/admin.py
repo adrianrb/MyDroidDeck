@@ -6,6 +6,7 @@ Strings are localized with the same catalogs as the API, negotiated from
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -24,6 +25,12 @@ from app.core.admin_auth import (
 )
 from app.core.config import settings
 from app.core.icons import prewarm_icons
+from app.core.runtime_config import (
+    RuntimeConfig,
+    load_runtime_config,
+    save_runtime_config,
+    validate_port,
+)
 from app.db.session import get_session
 from app.i18n.translator import negotiate, translate
 from app.models.action import ActionBinding
@@ -41,7 +48,11 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 def _base_context(request: Request) -> dict:
     locale = negotiate(request.headers.get("accept-language"))
-    return {"t": lambda key: translate(key, locale), "locale": locale}
+    return {
+        "t": lambda key: translate(key, locale),
+        "locale": locale,
+        "auth_enabled": settings.admin_auth_enabled,
+    }
 
 
 def _parse_buttons(raw: str) -> list[Button]:
@@ -57,6 +68,8 @@ def _parse_buttons(raw: str) -> list[Button]:
 
 @auth_router.get("/login", response_class=HTMLResponse)
 def login_form(request: Request):
+    if not settings.admin_auth_enabled:
+        return RedirectResponse(url="/admin/config", status_code=303)
     return templates.TemplateResponse(
         request=request,
         name="login.html",
@@ -70,6 +83,8 @@ def login(
     username: str = Form(""),
     password: str = Form(""),
 ):
+    if not settings.admin_auth_enabled:
+        return RedirectResponse(url="/admin/config", status_code=303)
     if not verify_credentials(username, password):
         context = _base_context(request)
         context["error"] = translate("error.invalid_login", context["locale"])
@@ -96,7 +111,92 @@ def logout() -> RedirectResponse:
 
 @router.get("", response_class=HTMLResponse)
 def dashboard(request: Request) -> RedirectResponse:
-    return RedirectResponse(url="/admin/profiles", status_code=307)
+    return RedirectResponse(url="/admin/config", status_code=307)
+
+
+def _apply_control(action: str) -> None:
+    """Best-effort call to the installer's control helper (logon task / restart).
+
+    The helper is only present on the installed Windows fork; when it is unset
+    (dev machines) the page simply records the preference in runtime.json.
+    """
+    helper = settings.control_helper.strip()
+    if not helper:
+        return
+    try:
+        subprocess.run(
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                helper,
+                "-Action",
+                action,
+            ],
+            capture_output=True,
+            timeout=settings.exec_timeout_seconds,
+        )
+    except (OSError, subprocess.SubprocessError):
+        # Never fail the page because the host helper is unavailable.
+        pass
+
+
+@router.get("/config", response_class=HTMLResponse)
+def config_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="config.html",
+        context={
+            **_base_context(request),
+            "config": load_runtime_config(),
+            "error": None,
+            "saved": request.query_params.get("saved"),
+            "restarted": request.query_params.get("restarted"),
+        },
+    )
+
+
+@router.post("/config")
+def save_config(
+    request: Request,
+    visible_on_network: str | None = Form(None),
+    port: str = Form(""),
+    start_on_logon: str | None = Form(None),
+):
+    context = _base_context(request)
+    try:
+        port_value = validate_port(port)
+    except ValueError:
+        context.update(
+            {
+                "config": load_runtime_config(),
+                "error": translate("error.invalid_port", context["locale"]),
+                "saved": None,
+                "restarted": None,
+            }
+        )
+        return templates.TemplateResponse(
+            request=request, name="config.html", context=context, status_code=400
+        )
+
+    config = RuntimeConfig(
+        visible_on_network=visible_on_network is not None,
+        port=port_value,
+        start_on_logon=start_on_logon is not None,
+    )
+    save_runtime_config(config)
+    # Reconcile the Windows logon task with the saved preference (best effort).
+    _apply_control("enable-logon" if config.start_on_logon else "disable-logon")
+    return RedirectResponse(url="/admin/config?saved=1", status_code=303)
+
+
+@router.post("/config/restart")
+def restart_server() -> RedirectResponse:
+    """Ask the host helper to restart the server (no-op on dev machines)."""
+    _apply_control("restart")
+    return RedirectResponse(url="/admin/config?restarted=1", status_code=303)
 
 
 @router.get("/profiles", response_class=HTMLResponse)

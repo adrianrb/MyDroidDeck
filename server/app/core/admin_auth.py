@@ -61,7 +61,13 @@ def verify_session_token(token: str | None) -> bool:
 
 
 def require_admin(request: Request) -> None:
-    """Guard for admin pages: send anonymous visitors to the login form."""
+    """Guard for admin pages: send anonymous visitors to the login form.
+
+    A no-login install (``MYDROIDDECK_ADMIN_AUTH_ENABLED=false``) leaves the pages
+    open; the REST API still requires a per-device bearer token.
+    """
+    if not settings.admin_auth_enabled:
+        return
     if not verify_session_token(request.cookies.get(COOKIE_NAME)):
         raise HTTPException(
             status_code=303, headers={"Location": "/admin/login"}

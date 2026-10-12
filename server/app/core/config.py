@@ -39,6 +39,17 @@ class Settings(BaseSettings):
     ssl_keyfile: str = ""
     # Where the extracted app icons (PNG, one per bound executable) are cached.
     icon_cache_dir: str = "./data/icons"
+    # Admin HTML UI authentication. The Windows "no-login" install sets this to
+    # False; the REST API keeps its per-device bearer tokens either way.
+    admin_auth_enabled: bool = True
+    # Mutable runtime settings (network visibility, port, start on logon), edited
+    # from /admin/config and read by launch.py. Relative to the working dir.
+    runtime_config_file: str = "./data/runtime.json"
+    # Windows Scheduled Task that starts the server at logon (used by control.ps1).
+    logon_task_name: str = "MyDroidDeck"
+    # PowerShell helper that the config page calls for start-on-logon/restart.
+    # Empty (the dev default) disables those actions; the installer sets it.
+    control_helper: str = ""
 
     @property
     def tls_enabled(self) -> bool:

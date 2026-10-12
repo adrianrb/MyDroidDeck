@@ -12,12 +12,15 @@
     </header>
     {% block nav %}
     <nav class="toolbar">
+        <a class="button" href="/admin/config">{{ t("admin.config") }}</a>
         <a class="button" href="/admin/profiles">{{ t("admin.profiles") }}</a>
         <a class="button" href="/admin/actions">{{ t("admin.actions") }}</a>
         <a class="button" href="/admin/devices">{{ t("admin.devices") }}</a>
+        {% if auth_enabled %}
         <form method="post" action="/admin/logout" class="logout">
             <button type="submit">{{ t("admin.logout") }}</button>
         </form>
+        {% endif %}
     </nav>
     {% endblock %}
     <main>

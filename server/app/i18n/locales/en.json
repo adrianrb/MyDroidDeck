@@ -42,5 +42,18 @@
   "admin.import_examples": "Import examples",
   "admin.imported": "Example actions imported (duplicates were skipped).",
   "admin.fill_actions": "Fill with standard actions",
-  "admin.fill_actions_hint": "Adds one button per registered action (existing ones are kept)."
+  "admin.fill_actions_hint": "Adds one button per registered action (existing ones are kept).",
+  "admin.config": "Settings",
+  "admin.visible_on_network": "Visible on the network",
+  "admin.visible_on_network_hint": "When off, the server listens only on this computer (127.0.0.1). Turn on to allow other devices on the LAN.",
+  "admin.port": "Port",
+  "admin.start_on_logon": "Start at Windows logon",
+  "admin.config_saved": "Settings saved.",
+  "admin.config_restarted": "Restarting the server…",
+  "admin.config_restart_hint": "Network/port changes take effect after the server restarts.",
+  "admin.manage_profiles": "Manage profiles",
+  "admin.manage_actions": "Manage actions",
+  "admin.auth_disabled": "Login disabled (no-login mode).",
+  "admin.restart": "Restart server",
+  "error.invalid_port": "Invalid port (use a number between 1 and 65535)."
 }

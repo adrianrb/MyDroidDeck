@@ -15,11 +15,19 @@ os.environ["MYDROIDDECK_EXEC_ENGINE"] = "dry-run"
 # nor pollute, the developer's cache).
 os.environ["MYDROIDDECK_ICON_CACHE_DIR"] = tempfile.mkdtemp(prefix="mydroiddeck-icons-")
 
+# Runtime config (edited by /admin/config) lives in a temp dir, and tests never
+# shell out to the installed Windows control helper.
+os.environ["MYDROIDDECK_RUNTIME_CONFIG_FILE"] = (
+    f"{tempfile.mkdtemp(prefix='mydroiddeck-runtime-')}/runtime.json"
+)
+os.environ["MYDROIDDECK_CONTROL_HELPER"] = ""
+
 # Hermetic runs: a developer's .env must not change what the tests assert.
 os.environ["MYDROIDDECK_PAIRING_CODE"] = "pair-dev"
 os.environ["MYDROIDDECK_ADMIN_USER"] = "admin"
 os.environ["MYDROIDDECK_ADMIN_PASSWORD"] = "test-admin"
 os.environ["MYDROIDDECK_ADMIN_SECRET_KEY"] = "test-secret"
+os.environ["MYDROIDDECK_ADMIN_AUTH_ENABLED"] = "true"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
