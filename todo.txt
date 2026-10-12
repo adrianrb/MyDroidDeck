@@ -1,0 +1,5 @@
+Para o servidor, crie uma pasta 'setup' e configure um instalador para Windows, Linux e WSL como segue:
+1. Detectar o ambiente e configurar a instalação (pré-requisitos, dependências etc.).
+2. Permitir o usuário escolher o local de instalação: padrão pasta 'home'
+3. Detectar se há uma GUI instalada e/ou executando e adicionar um atalho no desktop do usuário
+4. Oferecer para icialização automática no logon
