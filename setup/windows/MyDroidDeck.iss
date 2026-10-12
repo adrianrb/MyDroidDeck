@@ -57,7 +57,7 @@ Name: "{app}\logs"
 
 [Icons]
 Name: "{group}\Iniciar servidor MyDroidDeck"; Filename: "{app}\{#AppExeName}"
-Name: "{group}\Configuracao do MyDroidDeck"; Filename: "http://127.0.0.1:{#DefaultPort}/admin/config"
+Name: "{group}\Configuracao do MyDroidDeck"; Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\tools\open-console.ps1"""; Comment: "Iniciar o servidor e abrir a Configuracao (Firefox)"
 Name: "{group}\Desinstalar MyDroidDeck"; Filename: "{uninstallexe}"
 
 [Run]

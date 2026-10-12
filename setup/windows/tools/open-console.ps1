@@ -38,16 +38,15 @@ if (-not $Running) {
     Start-Sleep -Seconds $DelaySeconds
 }
 
-# Open the Configuration page. Prefer the browser configured on this machine
-# (MYDROIDDECK_BROWSER, then the local Firefox), else the system default.
+# Open the Configuration page in the owner's browser. Never the Windows default
+# browser (Edge): use MYDROIDDECK_BROWSER, else the local Firefox. If neither
+# exists, report the URL instead of silently falling back to Edge.
 $Url = "http://127.0.0.1:$Port/"
 $Browser = $env:MYDROIDDECK_BROWSER
-if (-not $Browser -or -not (Test-Path -LiteralPath $Browser)) {
-    $Candidate = 'C:\Desenv\Util\Firefox\firefox.exe'
-    if (Test-Path -LiteralPath $Candidate) { $Browser = $Candidate } else { $Browser = $null }
-}
-if ($Browser) {
+if (-not $Browser) { $Browser = 'C:\Desenv\Util\Firefox\firefox.exe' }
+if (Test-Path -LiteralPath $Browser) {
     Start-Process -FilePath $Browser -ArgumentList $Url
 } else {
-    Start-Process -FilePath $Url
+    Write-Warning "Navegador não encontrado: $Browser — abra $Url manualmente."
+    exit 1
 }
