@@ -1,5 +1,5 @@
 <#
-    MyDroidDeck control helper — called by the server's /admin/config page.
+    MyDroidDeck control helper - called by the server's /admin/config page.
 
     Actions:
       enable-logon    add a hidden launcher to the user's Startup folder

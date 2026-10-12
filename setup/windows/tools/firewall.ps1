@@ -1,5 +1,5 @@
 <#
-    MyDroidDeck firewall rule — scoped to the bundled Python so any port serves.
+    MyDroidDeck firewall rule - scoped to the bundled Python so any port serves.
 
     Actions:
       add      (re)create the inbound rule (needs an elevated PowerShell)

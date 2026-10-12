@@ -13,7 +13,7 @@
 ; uses device tokens.
 ;
 ; Note: enabling LAN access ("Visivel na rede") also needs a Windows Firewall
-; rule, which requires an elevated PowerShell once — see setup/README.md.
+; rule, which requires an elevated PowerShell once - see setup/README.md.
 
 #define AppName "MyDroidDeck"
 #define AppPublisher "MyDroidDeck"
@@ -27,7 +27,7 @@ AppId={{9C1B7E5A-3F2D-4A6B-8E71-2D5C0A4F1B93}
 AppName={#AppName}
 AppVersion={#Version}
 AppPublisher={#AppPublisher}
-; Per-user install in the user's HOME — never needs administrator rights.
+; Per-user install in the user's HOME - never needs administrator rights.
 DefaultDirName={%USERPROFILE}\MyDroidDeck
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
