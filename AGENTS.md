@@ -76,6 +76,8 @@ cd server && .venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
   (`versionName`/`versionCode`; server `/version` + `/health`).
 - **Before every commit, bump the build number (Z in X.Y.Z)** of the component(s)
   touched, e.g. `0.4.0` → `0.4.1`. Touching both components bumps both files.
+- **When the user asks for a "fork" (a variant, e.g. the no-login fork), create a
+  git branch first** (e.g. `fork/no-login`) and do the work there.
 - UTF-8 everywhere (source, config, data).
 - Every feature ships with unit + integration tests. See `docs/TEST_PLAN.md`.
 - Use sub-agents in parallel when tasks are independent.
