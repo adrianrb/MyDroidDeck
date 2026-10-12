@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="toolbar">
+<div class="page-head">
+    <h2>{{ t("admin.profiles") }}</h2>
     <a class="button" href="/admin/profiles/new">{{ t("admin.new_profile") }}</a>
 </div>
 {% if profiles %}
+<div class="table-wrap">
 <table>
     <thead>
         <tr>
@@ -19,18 +21,20 @@
             <td>{{ profile.name }}</td>
             <td>{{ profile.locale }}</td>
             <td>{{ profile.buttons | length }}</td>
-            <td>
-                <form method="post" action="/admin/profiles/{{ profile.id }}/examples">
-                    <button type="submit">{{ t("admin.fill_actions") }}</button>
+            <td class="nowrap">
+                <a class="button ghost small" href="/admin/profiles/{{ profile.id }}/edit">{{ t("admin.edit") }}</a>
+                <form method="post" action="/admin/profiles/{{ profile.id }}/examples" class="inline">
+                    <button type="submit" class="ghost small" title="{{ t('admin.fill_actions_hint') }}">{{ t("admin.fill_actions") }}</button>
                 </form>
-                <form method="post" action="/admin/profiles/{{ profile.id }}/delete">
-                    <button type="submit" class="danger">{{ t("admin.delete") }}</button>
+                <form method="post" action="/admin/profiles/{{ profile.id }}/delete" class="inline">
+                    <button type="submit" class="ghost small danger">{{ t("admin.delete") }}</button>
                 </form>
             </td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% else %}
 <p class="muted">{{ t("admin.empty") }}</p>
 {% endif %}

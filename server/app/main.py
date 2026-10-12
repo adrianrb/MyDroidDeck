@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from app import __version__
 from app.api import actions, admin, health, pairing, profiles
 from app.core.config import settings
-from app.db.session import Base, engine
+from app.db.session import Base, engine, ensure_schema
 
 logger = logging.getLogger("mydroiddeck")
 
@@ -22,6 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     Base.metadata.create_all(bind=engine)
+    ensure_schema()
     if settings.admin_password == "admin" or settings.admin_secret_key == "change-me":
         logger.warning(
             "Admin UI is using default credentials/secret; set "

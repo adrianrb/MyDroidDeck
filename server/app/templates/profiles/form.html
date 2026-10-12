@@ -1,19 +1,117 @@
 {% extends "base.html" %}
 {% block content %}
 {% if error %}<p class="error">{{ error }}</p>{% endif %}
-<form method="post" action="/admin/profiles">
-    <label>
-        {{ t("admin.name") }}
-        <input type="text" name="name" required>
-    </label>
-    <label>
-        {{ t("admin.locale") }}
-        <input type="text" name="locale" value="pt_BR">
-    </label>
-    <label>
-        {{ t("admin.buttons_hint") }}
-        <textarea name="buttons" rows="6" placeholder="Cena inicial|obs.scene.iniciar"></textarea>
-    </label>
-    <button type="submit">{{ t("admin.save") }}</button>
-</form>
+<div class="card">
+    <h2>{% if profile %}{{ t("admin.edit_profile") }}{% else %}{{ t("admin.new_profile") }}{% endif %}</h2>
+    <form method="post" id="profile-form"
+          action="{% if profile %}/admin/profiles/{{ profile.id }}{% else %}/admin/profiles{% endif %}">
+        <label>
+            {{ t("admin.name") }}
+            <input type="text" name="name" required value="{{ profile.name if profile else '' }}">
+        </label>
+        <label>
+            {{ t("admin.locale") }}
+            <select name="locale">
+                <option value="pt_BR" {% if not profile or profile.locale == "pt_BR" %}selected{% endif %}>Português (Brasil)</option>
+                <option value="en" {% if profile and profile.locale == "en" %}selected{% endif %}>English</option>
+            </select>
+        </label>
+
+        <label>{{ t("admin.buttons") }}</label>
+        <p class="muted small">{{ t("admin.buttons_editor_hint") }}</p>
+        <div class="buttons-editor" id="buttons-editor" data-label-ph="{{ t('admin.label') }}">
+            {% set row_source = profile_rows if profile_rows is defined and profile_rows is not none else (profile.buttons if profile else []) %}
+            {% for button in row_source|sort(attribute="index") %}
+            <div class="button-row" data-row draggable="true">
+                <input type="text" class="row-label" value="{{ button.label }}"
+                       placeholder="{{ t('admin.label') }}">
+                <input type="text" class="row-action" value="{{ button.action }}"
+                       placeholder="obs.scene.iniciar">
+                <span class="row-actions">
+                    <button type="button" class="ghost small" data-remove title="{{ t('admin.remove') }}">✕</button>
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Serializable fallback: edited directly when JavaScript is off. -->
+        <textarea name="buttons" id="buttons-serialized" rows="4"
+                  class="js-fallback">{{ buttons_text or '' }}</textarea>
+        <p>
+            <button type="button" class="ghost small" id="add-button">+ {{ t("admin.add_button") }}</button>
+        </p>
+        <button type="submit">{{ t("admin.save") }}</button>
+        <a class="button ghost" href="/admin/profiles">{{ t("admin.cancel") }}</a>
+    </form>
+</div>
+<script>
+    (function () {
+        var editor = document.getElementById("buttons-editor");
+        var textarea = document.getElementById("buttons-serialized");
+        var labelPh = editor.getAttribute("data-label-ph");
+        var dragRow = null;
+
+        function rows() {
+            return Array.prototype.slice.call(editor.querySelectorAll("[data-row]"));
+        }
+
+        function makeRow(label, action) {
+            var row = document.createElement("div");
+            row.className = "button-row";
+            row.setAttribute("data-row", "");
+            row.draggable = true;
+            row.innerHTML =
+                '<input type="text" class="row-label" value="' + (label || "").replace(/"/g, "&quot;") +
+                '" placeholder="' + labelPh + '">' +
+                '<input type="text" class="row-action" value="' + (action || "").replace(/"/g, "&quot;") +
+                '" placeholder="obs.scene.iniciar">' +
+                '<span class="row-actions"><button type="button" class="ghost small" data-remove title="✕">✕</button></span>';
+            return row;
+        }
+
+        // When JavaScript runs, the textarea is the *fallback*: hide it and let the
+        // rows drive the submitted value (serialized on submit).
+        textarea.style.display = "none";
+
+        document.getElementById("add-button").addEventListener("click", function () {
+            editor.appendChild(makeRow("", ""));
+        });
+
+        editor.addEventListener("click", function (event) {
+            var remove = event.target.closest("[data-remove]");
+            if (remove) remove.closest("[data-row]").remove();
+        });
+
+        // Drag & drop reordering between rows (HTML5).
+        editor.addEventListener("dragstart", function (event) {
+            dragRow = event.target.closest("[data-row]");
+            if (dragRow) dragRow.classList.add("dragging");
+        });
+        editor.addEventListener("dragend", function () {
+            if (dragRow) dragRow.classList.remove("dragging");
+            dragRow = null;
+        });
+        editor.addEventListener("dragover", function (event) {
+            if (event.target.closest("[data-row]")) event.preventDefault();
+        });
+        editor.addEventListener("drop", function (event) {
+            var target = event.target.closest("[data-row]");
+            if (!dragRow || !target || target === dragRow) return;
+            event.preventDefault();
+            var list = rows();
+            if (list.indexOf(dragRow) < list.indexOf(target)) target.after(dragRow);
+            else target.before(dragRow);
+        });
+
+        document.getElementById("profile-form").addEventListener("submit", function () {
+            var lines = [];
+            rows().forEach(function (row) {
+                var label = row.querySelector(".row-label").value.trim();
+                var action = row.querySelector(".row-action").value.trim();
+                if (label || action) lines.push(label + "|" + action);
+            });
+            textarea.value = lines.join("\n");
+        });
+    })();
+</script>
 {% endblock %}

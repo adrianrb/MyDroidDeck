@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.executor import execute_action
-from app.core.icons import extract_icon
+from app.core.icons import resolve_icon
 from app.core.security import require_device
 from app.db.session import get_session
 from app.models.action import ActionBinding
@@ -56,7 +56,8 @@ def action_icon(action: str, session: Session = Depends(get_session)) -> FileRes
     """Serve the real icon (PNG) of the program bound to ``action``.
 
     The icon is extracted from the Windows executable on first request and cached
-    on disk (see ``app.core.icons``). Unknown actions — and programs without an
+    on disk (see ``app.core.icons``) — or, when the action declares a custom icon,
+    that one is served instead. Unknown actions — and programs without an
     extractable icon — answer 404, so the deck keeps showing the text label.
     """
     binding = session.scalar(
@@ -64,7 +65,7 @@ def action_icon(action: str, session: Session = Depends(get_session)) -> FileRes
     )
     if binding is None:
         raise HTTPException(status_code=404, detail="unknown action")
-    icon = extract_icon(binding.executable)
+    icon = resolve_icon(binding.executable, binding.icon)
     if icon is None:
         raise HTTPException(status_code=404, detail="icon unavailable")
     return FileResponse(icon, media_type="image/png")

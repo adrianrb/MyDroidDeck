@@ -55,5 +55,18 @@
   "admin.manage_actions": "Manage actions",
   "admin.auth_disabled": "Login disabled (no-login mode).",
   "admin.restart": "Restart server",
-  "error.invalid_port": "Invalid port (use a number between 1 and 65535)."
+  "error.invalid_port": "Invalid port (use a number between 1 and 65535).",
+  "admin.edit": "Edit",
+  "admin.edit_profile": "Edit profile",
+  "admin.edit_action": "Edit action",
+  "admin.cancel": "Cancel",
+  "admin.move_up": "Move up",
+  "admin.move_down": "Move down",
+  "admin.remove": "Remove",
+  "admin.add_button": "Add button",
+  "admin.label": "Label",
+  "admin.icon": "Icon",
+  "admin.custom_icon": "Custom icon (optional)",
+  "admin.custom_icon_hint": "Path to a .png, .ico or executable with the desired icon. Empty = the program's default icon (from the executable).",
+  "admin.buttons_editor_hint": "Buttons in deck order. Drag to rearrange before saving."
 }

@@ -29,3 +29,30 @@ def get_session() -> Iterator[Session]:
         yield db
     finally:
         db.close()
+
+
+def ensure_schema() -> None:
+    """Idempotently bring the (SQLite) schema up to date with the models.
+
+    ``Base.metadata.create_all`` creates missing *tables* but never alters existing
+    ones, so columns added after a database was first created (e.g. ``icon`` and
+    ``sort_order`` on ``action_bindings``) are added here with a plain ALTER.
+    Fresh databases are created complete by ``create_all`` and this becomes a no-op.
+    """
+    if not settings.database_url.startswith("sqlite"):
+        return
+    from sqlalchemy import text
+
+    with engine.begin() as connection:
+        columns = {
+            row[1]
+            for row in connection.execute(text("PRAGMA table_info(action_bindings)"))
+        }
+        if "icon" not in columns:
+            connection.execute(
+                text("ALTER TABLE action_bindings ADD COLUMN icon VARCHAR(512)")
+            )
+        if "sort_order" not in columns:
+            connection.execute(
+                text("ALTER TABLE action_bindings ADD COLUMN sort_order INTEGER DEFAULT 0")
+            )

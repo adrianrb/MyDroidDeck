@@ -55,5 +55,18 @@
   "admin.manage_actions": "Gerenciar ações",
   "admin.auth_disabled": "Login desativado (modo sem login).",
   "admin.restart": "Reiniciar servidor",
-  "error.invalid_port": "Porta inválida (use um número entre 1 e 65535)."
+  "error.invalid_port": "Porta inválida (use um número entre 1 e 65535).",
+  "admin.edit": "Editar",
+  "admin.edit_profile": "Editar perfil",
+  "admin.edit_action": "Editar ação",
+  "admin.cancel": "Cancelar",
+  "admin.move_up": "Subir",
+  "admin.move_down": "Descer",
+  "admin.remove": "Remover",
+  "admin.add_button": "Adicionar botão",
+  "admin.label": "Rótulo",
+  "admin.icon": "Ícone",
+  "admin.custom_icon": "Ícone personalizado (opcional)",
+  "admin.custom_icon_hint": "Caminho de um .png, .ico ou executável com o ícone desejado. Vazio = ícone padrão do programa (do executável).",
+  "admin.buttons_editor_hint": "Botões na ordem do deck. Arraste para reorganizar antes de salvar."
 }

@@ -1,5 +1,6 @@
 """Icon extraction/serving: the deck draws the program's real icon on each button."""
 
+import base64
 import shutil
 from pathlib import Path
 
@@ -72,6 +73,43 @@ def test_binding_without_extractable_icon_answers_404(admin_client):
     assert _bind(admin_client).status_code == 303
     response = admin_client.get("/icon", params={"action": "bloco.notas"})
     assert response.status_code == 404
+
+
+def test_custom_png_icon_overrides_the_default(tmp_path, admin_client):
+    custom = tmp_path / "lampada.png"
+    custom.write_bytes(
+        base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        )
+    )
+    admin_client.post(
+        "/admin/actions",
+        data={
+            "action": "luz.mesa",
+            "executable": "notepad.exe",
+            "icon": str(custom),
+        },
+        follow_redirects=False,
+    )
+    # dry-run still serves the icon: a PNG file is copied straight into the cache
+    # (no Windows host needed), instead of extracting it from the executable.
+    response = admin_client.get("/icon", params={"action": "luz.mesa"})
+    assert response.status_code == 200
+    assert response.content[:8] == PNG_MAGIC
+
+
+def test_custom_icon_that_is_missing_answers_404(admin_client):
+    admin_client.post(
+        "/admin/actions",
+        data={
+            "action": "sem.icone",
+            "executable": "notepad.exe",
+            "icon": "C:\\nao\\existe.ico",
+        },
+        follow_redirects=False,
+    )
+    # dry-run: there is no Windows host to extract an .ico from.
+    assert admin_client.get("/icon", params={"action": "sem.icone"}).status_code == 404
 
 
 def test_prewarm_icons_never_raises_when_extraction_fails():

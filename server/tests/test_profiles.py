@@ -43,6 +43,40 @@ def test_delete_profile(client):
     assert client.get(f"/profiles/{profile_id}").status_code == 404
 
 
+def test_update_profile_replaces_name_and_button_order(client):
+    created = client.post("/profiles", json=_payload()).json()
+    payload = {
+        "name": "Deck renomeado",
+        "locale": "en",
+        "buttons": [
+            {"index": 0, "label": "Play", "action": "spotify.play"},
+            {"index": 1, "label": "Cena inicial", "action": "obs.scene.iniciar"},
+        ],
+    }
+    updated = client.put(f"/profiles/{created['id']}", json=payload)
+    assert updated.status_code == 200
+    body = updated.json()
+    assert body["name"] == "Deck renomeado"
+    assert body["locale"] == "en"
+    assert [button["action"] for button in body["buttons"]] == [
+        "spotify.play",
+        "obs.scene.iniciar",
+    ]
+    assert [button["index"] for button in body["buttons"]] == [0, 1]
+
+
+def test_update_profile_conflicts_on_taken_name(client):
+    client.post("/profiles", json=_payload(name="A"))
+    other = client.post("/profiles", json=_payload(name="B")).json()
+    response = client.put(f"/profiles/{other['id']}", json=_payload(name="A"))
+    assert response.status_code == 409
+
+
+def test_update_missing_profile_is_404(client):
+    response = client.put("/profiles/9999", json=_payload())
+    assert response.status_code == 404
+
+
 def _example_actions(admin_client):
     """Seed the standard bindings and return a fresh empty profile id."""
     admin_client.post("/admin/actions/examples", follow_redirects=False)

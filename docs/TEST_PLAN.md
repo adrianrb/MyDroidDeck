@@ -46,6 +46,11 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | S-29 | Fill a profile with the standard actions | 303; one button per binding, idempotent, own buttons kept, sequential indexes | ✅ `test_profiles.py` |
 | S-30 | Button icons (`GET /icon?action=`) | Serves the extracted PNG; 404 for unknown action/no icon; device auth required; extracts from a real Windows executable and from a Store-app alias (live — skipped without a Windows host); the shell's *jumbo* icon is preferred (≥48px, crisp on the deck) with the 32px `ExtractAssociatedIcon` as fallback; cache is stable per executable | ✅ `test_icons.py` |
 | S-31 | Runtime settings (`/admin/config`) | Values persist to `data/runtime.json`; invalid port → 400; no-login mode opens the admin (login redirects to config) | ✅ `test_runtime_config.py`, `test_admin_config.py` |
+| S-32 | Update a profile (`PUT /profiles/{id}`) | Replaces name/locale and the full button list in the given order (re-indexed); 409 on taken name; 404 on missing id | ✅ `test_profiles.py` |
+| S-33 | Admin edits a profile | Edit page prefilled; form POST persists name/locale/buttons; a button can be moved up/down inside the profile (deck order) | ✅ `test_admin.py` |
+| S-34 | Admin edits an action + chooses its icon | Edit page prefilled; rebinding `executable`/`args` persists; a custom icon path (`.png`/`.ico`/`.exe`) is served by `GET /icon` and by the admin preview — empty means the executable's own icon; missing custom icon → 404 | ✅ `test_admin.py`, `test_icons.py` |
+| S-35 | Admin reorders actions | ↑/↓ move endpoints persist a dense `sort_order`; the actions list and the "fill profile" order follow it | ✅ `test_admin.py` |
+| S-36 | Professional admin UI (sidebar/cards) | Base layout restyled; pages render with the new chrome; mobile narrow layout; login is a standalone centered card | ✅ rendered by `test_admin.py` |
 
 ## Android app (unit / instrumentation)
 | ID | Case | Expected | Status |

@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<p class="muted">{{ t("admin.pairing_hint") }} <code>{{ pairing_code }}</code></p>
+<div class="page-head">
+    <h2>{{ t("admin.devices") }}</h2>
+    <p class="muted small page-head-note">{{ t("admin.pairing_hint") }} <code>{{ pairing_code }}</code></p>
+</div>
 {% if devices %}
+<div class="table-wrap">
 <table>
     <thead>
         <tr>
@@ -20,7 +24,7 @@
             <td>
                 {% if not device.revoked %}
                 <form method="post" action="/admin/devices/{{ device.id }}/revoke">
-                    <button type="submit" class="danger">{{ t("admin.revoke") }}</button>
+                    <button type="submit" class="ghost small danger">{{ t("admin.revoke") }}</button>
                 </form>
                 {% endif %}
             </td>
@@ -28,6 +32,7 @@
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% else %}
 <p class="muted">{{ t("admin.no_devices") }}</p>
 {% endif %}

@@ -162,6 +162,51 @@ def icon_cache_file(executable: str) -> Path:
     return cache_dir() / f"{digest}.png"
 
 
+def custom_icon_cache_file(path: str) -> Path:
+    """Stable cache path for a *user-chosen* icon (kept apart from exe icons)."""
+    digest = hashlib.sha256(("custom:" + path.strip().lower()).encode("utf-8")).hexdigest()[:16]
+    return cache_dir() / f"custom-{digest}.png"
+
+
+def extract_custom_icon(path: str) -> Path | None:
+    """Return a cached PNG for a user-chosen icon path.
+
+    Accepts any path the admin picked: a PNG file is copied straight into the
+    cache (no Windows host needed); ``.ico``/``.exe``/``.dll`` go through the
+    same PowerShell extraction as the executable icons, so the deck can draw a
+    program's own icon (or a custom .ico) regardless of the bound executable.
+    """
+    if not path.strip():
+        return None
+
+    target = custom_icon_cache_file(path)
+    if target.is_file():
+        return target
+
+    source = Path(path.strip())
+    if source.is_file() and source.read_bytes()[:8] == PNG_MAGIC:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(source.read_bytes())
+        return target
+
+    if settings.exec_engine == "dry-run":
+        return None
+
+    png = _render_icon(host_path(path.strip()))
+    if png is None:
+        return None
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(png)
+    return target
+
+
+def resolve_icon(executable: str, custom_icon: str | None = None) -> Path | None:
+    """Pick the PNG to serve for an action: custom path when set, else the exe."""
+    if custom_icon and custom_icon.strip():
+        return extract_custom_icon(custom_icon)
+    return extract_icon(executable)
+
+
 def extract_icon(executable: str) -> Path | None:
     """Return the cached PNG icon for ``executable``, extracting it on first use.
 
@@ -198,6 +243,15 @@ def prewarm_icons(executables: Iterable[str]) -> None:
             extract_icon(executable)
         except Exception:  # pragma: no cover - best effort, never breaks the request
             logger.warning("falha ao pré-aquecer o ícone de %s", executable)
+
+
+def prewarm_custom_icons(paths: Iterable[str]) -> None:
+    """Extract (and cache) the icons of user-chosen paths, ignoring failures."""
+    for path in paths:
+        try:
+            extract_custom_icon(path)
+        except Exception:  # pragma: no cover - best effort, never breaks the request
+            logger.warning("falha ao pré-aquecer o ícone personalizado de %s", path)
 
 
 def _render_icon(host_executable: str) -> bytes | None:

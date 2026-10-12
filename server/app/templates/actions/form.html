@@ -1,22 +1,44 @@
 {% extends "base.html" %}
 {% block content %}
 {% if error %}<p class="error">{{ error }}</p>{% endif %}
-<form method="post" action="/admin/actions">
-    <label>
-        {{ t("admin.action") }}
-        <input type="text" name="action" required placeholder="obs.scene.iniciar">
-    </label>
-    <p class="muted">{{ t("admin.action_hint") }}</p>
-    <label>
-        {{ t("admin.executable") }}
-        <input type="text" name="executable" required
-               placeholder="C:\Program Files\OBS Studio\bin\64bit\obs64.exe">
-    </label>
-    <p class="muted">{{ t("admin.executable_hint") }}</p>
-    <label>
-        {{ t("admin.args") }}
-        <input type="text" name="args" placeholder="--scene Cena">
-    </label>
-    <button type="submit">{{ t("admin.save") }}</button>
-</form>
+<div class="card">
+    <h2>{% if binding %}{{ t("admin.edit_action") }}{% else %}{{ t("admin.new_action") }}{% endif %}</h2>
+    <form method="post"
+          action="{% if binding %}/admin/actions/{{ binding.id }}{% else %}/admin/actions{% endif %}">
+        <label>
+            {{ t("admin.action") }}
+            <input type="text" name="action" required value="{{ binding.action if binding else '' }}"
+                   placeholder="obs.scene.iniciar">
+        </label>
+        <p class="muted small">{{ t("admin.action_hint") }}</p>
+        <label>
+            {{ t("admin.executable") }}
+            <input type="text" name="executable" required list="executable-suggestions"
+                   value="{{ binding.executable if binding else '' }}"
+                   placeholder="C:\Program Files\OBS Studio\bin\64bit\obs64.exe">
+            <datalist id="executable-suggestions">
+                <option value="notepad.exe">
+                <option value="calc.exe">
+                <option value="explorer.exe">
+                <option value="cmd.exe">
+                <option value="C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe">
+            </datalist>
+        </label>
+        <p class="muted small">{{ t("admin.executable_hint") }}</p>
+        <label>
+            {{ t("admin.args") }}
+            <input type="text" name="args" value="{{ binding.args if binding else '' }}"
+                   placeholder="--scene Cena">
+        </label>
+        <label>
+            {{ t("admin.custom_icon") }}
+            <input type="text" name="icon" value="{{ binding.icon if binding and binding.icon else '' }}"
+                   placeholder="C:\icons\meu-icone.ico">
+            {% if binding and binding.id %}<img class="icon-preview" src="/admin/actions/{{ binding.id }}/icon" alt="">{% endif %}
+        </label>
+        <p class="muted small">{{ t("admin.custom_icon_hint") }}</p>
+        <button type="submit">{{ t("admin.save") }}</button>
+        <a class="button ghost" href="/admin/actions">{{ t("admin.cancel") }}</a>
+    </form>
+</div>
 {% endblock %}

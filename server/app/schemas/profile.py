@@ -30,6 +30,10 @@ class ProfileCreate(ProfileBase):
     buttons: list[ButtonCreate] = Field(default_factory=list)
 
 
+class ProfileUpdate(ProfileBase):
+    buttons: list[ButtonCreate] = Field(default_factory=list)
+
+
 class ProfileRead(ProfileBase):
     model_config = ConfigDict(from_attributes=True)
 

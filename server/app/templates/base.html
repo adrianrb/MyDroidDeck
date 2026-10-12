@@ -6,25 +6,47 @@
     <title>{{ t("admin.title") }}</title>
     <link rel="stylesheet" href="/static/admin.css">
 </head>
-<body>
-    <header>
-        <h1>{{ t("admin.title") }}</h1>
-    </header>
-    {% block nav %}
-    <nav class="toolbar">
-        <a class="button" href="/admin/config">{{ t("admin.config") }}</a>
-        <a class="button" href="/admin/profiles">{{ t("admin.profiles") }}</a>
-        <a class="button" href="/admin/actions">{{ t("admin.actions") }}</a>
-        <a class="button" href="/admin/devices">{{ t("admin.devices") }}</a>
-        {% if auth_enabled %}
-        <form method="post" action="/admin/logout" class="logout">
-            <button type="submit">{{ t("admin.logout") }}</button>
-        </form>
-        {% endif %}
-    </nav>
-    {% endblock %}
-    <main>
-        {% block content %}{% endblock %}
-    </main>
+<body class="{% block body_class %}{% endblock %}">
+    <div class="app">
+        <aside class="sidebar">
+            <a class="brand" href="/admin/config">
+                <span class="brand-mark">M</span>
+                <span class="brand-name">MyDroidDeck</span>
+            </a>
+            {% block nav %}
+            <nav class="menu">
+                <a class="menu-item" href="/admin/config">{{ t("admin.config") }}</a>
+                <a class="menu-item" href="/admin/profiles">{{ t("admin.profiles") }}</a>
+                <a class="menu-item" href="/admin/actions">{{ t("admin.actions") }}</a>
+                <a class="menu-item" href="/admin/devices">{{ t("admin.devices") }}</a>
+            </nav>
+            <div class="sidebar-footer">
+                {% if auth_enabled %}
+                <form method="post" action="/admin/logout">
+                    <button type="submit" class="button ghost">{{ t("admin.logout") }}</button>
+                </form>
+                {% else %}
+                <p class="muted small">{{ t("admin.auth_disabled") }}</p>
+                {% endif %}
+            </div>
+            {% endblock %}
+        </aside>
+        <main class="content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script>
+        // Highlights the current section in the sidebar (server-rendered pages).
+        (function () {
+            var path = window.location.pathname;
+            document.querySelectorAll(".menu-item").forEach(function (link) {
+                if (path.indexOf(link.getAttribute("href")) === 0 && link.getAttribute("href") !== "/admin/config") {
+                    link.classList.add("active");
+                } else if (path === "/admin/config" && link.getAttribute("href") === "/admin/config") {
+                    link.classList.add("active");
+                }
+            });
+        })();
+    </script>
 </body>
 </html>

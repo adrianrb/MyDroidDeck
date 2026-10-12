@@ -9,8 +9,8 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -24,7 +24,7 @@ from app.core.admin_auth import (
     verify_credentials,
 )
 from app.core.config import settings
-from app.core.icons import prewarm_icons
+from app.core.icons import prewarm_icons, resolve_icon
 from app.core.runtime_config import (
     RuntimeConfig,
     load_runtime_config,
@@ -64,6 +64,55 @@ def _parse_buttons(raw: str) -> list[Button]:
             Button(index=index, label=label.strip(), action=action.strip())
         )
     return buttons
+
+
+def _ordered_bindings(session: Session) -> list[ActionBinding]:
+    """Bindings in admin-defined order (dense sort_order, then creation order)."""
+    return list(
+        session.scalars(
+            select(ActionBinding).order_by(
+                ActionBinding.sort_order, ActionBinding.id
+            )
+        )
+    )
+
+
+def _renumber_actions(session: Session) -> None:
+    """Give every binding a dense sort_order matching the current list order."""
+    for position, binding in enumerate(_ordered_bindings(session)):
+        binding.sort_order = position
+
+
+def _move_action(session: Session, action_id: int, direction: str) -> bool:
+    """Swap ``action_id`` with its neighbor in the admin order (best effort)."""
+    ordered = _ordered_bindings(session)
+    positions = {binding.id: index for index, binding in enumerate(ordered)}
+    index = positions.get(action_id)
+    if index is None:
+        return False
+    neighbor = index - 1 if direction == "up" else index + 1
+    if neighbor < 0 or neighbor >= len(ordered):
+        return True  # already at the edge: nothing to do, no error
+    ordered[index], ordered[neighbor] = ordered[neighbor], ordered[index]
+    for position, binding in enumerate(ordered):
+        binding.sort_order = position
+    return True
+
+
+def _move_button(profile: Profile, button_id: int, direction: str) -> bool:
+    """Swap ``button_id`` with its neighbor inside ``profile`` (by index)."""
+    ordered = sorted(profile.buttons, key=lambda button: button.index)
+    positions = {button.id: index for index, button in enumerate(ordered)}
+    index = positions.get(button_id)
+    if index is None:
+        return False
+    neighbor = index - 1 if direction == "up" else index + 1
+    if neighbor < 0 or neighbor >= len(ordered):
+        return True
+    ordered[index], ordered[neighbor] = ordered[neighbor], ordered[index]
+    for position, button in enumerate(ordered):
+        button.index = position
+    return True
 
 
 @auth_router.get("/login", response_class=HTMLResponse)
@@ -229,6 +278,8 @@ def create_profile(
     context = _base_context(request)
     if session.scalar(select(Profile).where(Profile.name == name)):
         context["error"] = translate("error.profile_exists", context["locale"])
+        context["profile_rows"] = _parse_buttons(buttons)
+        context["buttons_text"] = buttons
         return templates.TemplateResponse(
             request=request,
             name="profiles/form.html",
@@ -241,6 +292,73 @@ def create_profile(
     session.add(profile)
     session.commit()
     return RedirectResponse(url="/admin/profiles", status_code=303)
+
+
+@router.get("/profiles/{profile_id}/edit", response_class=HTMLResponse)
+def edit_profile(request: Request, profile_id: int, session: Session = Depends(get_session)):
+    profile = session.get(Profile, profile_id)
+    if profile is None:
+        return RedirectResponse(url="/admin/profiles", status_code=303)
+    return templates.TemplateResponse(
+        request=request,
+        name="profiles/form.html",
+        context={
+            **_base_context(request),
+            "profile": profile,
+            "buttons_text": "\n".join(
+                f"{button.label}|{button.action}"
+                for button in sorted(profile.buttons, key=lambda b: b.index)
+            ),
+            "error": None,
+        },
+    )
+
+
+@router.post("/profiles/{profile_id}")
+def update_profile(
+    request: Request,
+    profile_id: int,
+    name: str = Form(...),
+    locale: str = Form("pt_BR"),
+    buttons: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    profile = session.get(Profile, profile_id)
+    if profile is None:
+        return RedirectResponse(url="/admin/profiles", status_code=303)
+    context = _base_context(request)
+    context.update(
+        {"profile": profile, "buttons_text": buttons, "error": None}
+    )
+    taken = session.scalar(
+        select(Profile).where(Profile.name == name, Profile.id != profile_id)
+    )
+    if taken:
+        context["profile_rows"] = _parse_buttons(buttons)
+        context["error"] = translate("error.profile_exists", context["locale"])
+        return templates.TemplateResponse(
+            request=request, name="profiles/form.html", context=context, status_code=409
+        )
+    profile.name = name
+    profile.locale = locale
+    profile.buttons = _parse_buttons(buttons)
+    session.commit()
+    return RedirectResponse(url="/admin/profiles", status_code=303)
+
+
+@router.post("/profiles/{profile_id}/buttons/{button_id}/move")
+def move_button(
+    profile_id: int,
+    button_id: int,
+    direction: str = Form(...),
+    session: Session = Depends(get_session),
+) -> RedirectResponse:
+    """Move a button one position up/down inside its profile (deck order)."""
+    profile = session.get(Profile, profile_id)
+    if profile is not None:
+        _move_button(profile, button_id, direction)
+        session.commit()
+    return RedirectResponse(url=f"/admin/profiles/{profile_id}/edit", status_code=303)
 
 
 @router.post("/profiles/{profile_id}/delete")
@@ -268,7 +386,7 @@ def fill_profile_with_actions(
     if profile is not None:
         used = {button.action for button in profile.buttons}
         next_index = max((button.index for button in profile.buttons), default=-1) + 1
-        for binding in session.scalars(select(ActionBinding).order_by(ActionBinding.id)):
+        for binding in _ordered_bindings(session):
             if binding.action in used:
                 continue
             profile.buttons.append(
@@ -288,17 +406,20 @@ def fill_profile_with_actions(
 
 
 def _warm_actions(actions: list[str]) -> None:
-    """Extract the icons of the executables bound to ``actions`` (best effort)."""
+    """Extract the icons (custom or executable) bound to ``actions`` (best effort)."""
     from app.db.session import SessionLocal
 
     with SessionLocal() as session:
-        executables = [
-            binding.executable
-            for binding in session.scalars(
+        bindings = list(
+            session.scalars(
                 select(ActionBinding).where(ActionBinding.action.in_(actions))
             )
-        ]
-    prewarm_icons(executables)
+        )
+    for binding in bindings:
+        try:
+            resolve_icon(binding.executable, binding.icon)
+        except Exception:  # pragma: no cover - best effort, never breaks the request
+            pass
 
 
 @router.get("/devices", response_class=HTMLResponse)
@@ -328,7 +449,7 @@ def revoke_device(
 
 @router.get("/actions", response_class=HTMLResponse)
 def list_actions(request: Request, session: Session = Depends(get_session)):
-    bindings = list(session.scalars(select(ActionBinding).order_by(ActionBinding.id)))
+    bindings = _ordered_bindings(session)
     return templates.TemplateResponse(
         request=request,
         name="actions/list.html",
@@ -359,9 +480,10 @@ def import_example_actions(
             )
         )
         existing.add(action)
+    _renumber_actions(session)
     session.commit()
     # Extract the icon of every binding in the background (once per program).
-    warm = list(session.scalars(select(ActionBinding.executable)))
+    warm = [binding.executable for binding in _ordered_bindings(session)]
     return RedirectResponse(
         url="/admin/actions?imported=1",
         status_code=303,
@@ -384,15 +506,28 @@ def create_action(
     action: str = Form(""),
     executable: str = Form(""),
     args: str = Form(""),
+    icon: str = Form(""),
     session: Session = Depends(get_session),
 ):
     context = _base_context(request)
     if not action.strip() or not executable.strip():
+        context["binding"] = {
+            "action": action,
+            "executable": executable,
+            "args": args,
+            "icon": icon,
+        }
         context["error"] = translate("error.required", context["locale"])
         return templates.TemplateResponse(
             request=request, name="actions/form.html", context=context, status_code=400
         )
     if session.scalar(select(ActionBinding).where(ActionBinding.action == action.strip())):
+        context["binding"] = {
+            "action": action,
+            "executable": executable,
+            "args": args,
+            "icon": icon,
+        }
         context["error"] = translate("error.action_exists", context["locale"])
         return templates.TemplateResponse(
             request=request, name="actions/form.html", context=context, status_code=409
@@ -402,15 +537,128 @@ def create_action(
             action=action.strip(),
             executable=executable.strip(),
             args=args.strip(),
+            icon=icon.strip() or None,
+            sort_order=_new_action_sort_order(session),
         )
     )
     session.commit()
-    # The deck draws the program's real icon: extract it once, in the background.
+    # The deck draws the program's icon (or the chosen custom one): warm it.
     return RedirectResponse(
         url="/admin/actions",
         status_code=303,
-        background=BackgroundTask(prewarm_icons, [executable.strip()]),
+        background=BackgroundTask(_warm_choice, executable.strip(), icon.strip()),
     )
+
+
+def _new_action_sort_order(session: Session) -> int:
+    ordered = _ordered_bindings(session)
+    if not ordered:
+        return 0
+    return max(binding.sort_order for binding in ordered) + 1
+
+
+def _warm_choice(executable: str, icon: str) -> None:
+    """Extract the icon this action will serve (custom path or the exe), best effort."""
+    try:
+        resolve_icon(executable, icon)
+    except Exception:  # pragma: no cover - best effort, never breaks the request
+        pass
+
+
+@router.get("/actions/{action_id}/edit", response_class=HTMLResponse)
+def edit_action(request: Request, action_id: int, session: Session = Depends(get_session)):
+    binding = session.get(ActionBinding, action_id)
+    if binding is None:
+        return RedirectResponse(url="/admin/actions", status_code=303)
+    return templates.TemplateResponse(
+        request=request,
+        name="actions/form.html",
+        context={**_base_context(request), "binding": binding, "error": None},
+    )
+
+
+@router.post("/actions/{action_id}")
+def update_action(
+    request: Request,
+    action_id: int,
+    action: str = Form(""),
+    executable: str = Form(""),
+    args: str = Form(""),
+    icon: str = Form(""),
+    session: Session = Depends(get_session),
+):
+    binding = session.get(ActionBinding, action_id)
+    if binding is None:
+        return RedirectResponse(url="/admin/actions", status_code=303)
+    context = _base_context(request)
+    context["binding"] = binding
+    if not action.strip() or not executable.strip():
+        context["binding"] = {
+            "action": action,
+            "executable": executable,
+            "args": args,
+            "icon": icon,
+        }
+        context["error"] = translate("error.required", context["locale"])
+        return templates.TemplateResponse(
+            request=request, name="actions/form.html", context=context, status_code=400
+        )
+    taken = session.scalar(
+        select(ActionBinding).where(
+            ActionBinding.action == action.strip(), ActionBinding.id != action_id
+        )
+    )
+    if taken:
+        context["binding"] = {
+            "action": action,
+            "executable": executable,
+            "args": args,
+            "icon": icon,
+        }
+        context["error"] = translate("error.action_exists", context["locale"])
+        return templates.TemplateResponse(
+            request=request, name="actions/form.html", context=context, status_code=409
+        )
+    binding.action = action.strip()
+    binding.executable = executable.strip()
+    binding.args = args.strip()
+    binding.icon = icon.strip() or None
+    session.commit()
+    return RedirectResponse(
+        url="/admin/actions",
+        status_code=303,
+        background=BackgroundTask(_warm_choice, executable.strip(), icon.strip()),
+    )
+
+
+@router.post("/actions/{action_id}/move")
+def move_action(
+    action_id: int,
+    direction: str = Form(...),
+    session: Session = Depends(get_session),
+) -> RedirectResponse:
+    """Move an action one position up/down in the admin list."""
+    _move_action(session, action_id, direction)
+    session.commit()
+    return RedirectResponse(url="/admin/actions", status_code=303)
+
+
+@router.get("/actions/{action_id}/icon")
+def action_icon_preview(
+    action_id: int, session: Session = Depends(get_session)
+) -> FileResponse:
+    """Serve the PNG the deck will use for this action (custom or executable icon).
+
+    Lets the admin form preview the icon before saving; answers 404 while there is
+    no extractable icon (same resolution the deck sees through ``GET /icon``).
+    """
+    binding = session.get(ActionBinding, action_id)
+    if binding is None:
+        return RedirectResponse(url="/admin/actions", status_code=303)
+    icon = resolve_icon(binding.executable, binding.icon)
+    if icon is None:
+        raise HTTPException(status_code=404, detail="icon unavailable")
+    return FileResponse(icon, media_type="image/png")
 
 
 @router.post("/actions/{action_id}/delete")
@@ -420,5 +668,7 @@ def delete_action(
     binding = session.get(ActionBinding, action_id)
     if binding is not None:
         session.delete(binding)
+        session.commit()
+        _renumber_actions(session)
         session.commit()
     return RedirectResponse(url="/admin/actions", status_code=303)

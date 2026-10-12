@@ -1,19 +1,25 @@
 {% extends "base.html" %}
 {% block content %}
-{% if imported %}<p class="muted">{{ t("admin.imported") }}</p>{% endif %}
-<div class="toolbar">
-    <a class="button" href="/admin/actions/new">{{ t("admin.new_action") }}</a>
-    <form method="post" action="/admin/actions/examples">
-        <button type="submit">{{ t("admin.import_examples") }}</button>
-    </form>
+{% if imported %}<div class="alert success">{{ t("admin.imported") }}</div>{% endif %}
+<div class="page-head">
+    <h2>{{ t("admin.actions") }}</h2>
+    <div class="toolbar">
+        <a class="button" href="/admin/actions/new">{{ t("admin.new_action") }}</a>
+        <form method="post" action="/admin/actions/examples">
+            <button type="submit" class="ghost">{{ t("admin.import_examples") }}</button>
+        </form>
+    </div>
 </div>
 {% if bindings %}
+<div class="table-wrap">
 <table>
     <thead>
         <tr>
+            <th></th>
             <th>{{ t("admin.action") }}</th>
             <th>{{ t("admin.executable") }}</th>
             <th>{{ t("admin.args") }}</th>
+            <th>{{ t("admin.icon") }}</th>
             <th>{{ t("admin.last_run") }}</th>
             <th>{{ t("admin.status") }}</th>
             <th></th>
@@ -22,22 +28,38 @@
     <tbody>
         {% for binding in bindings %}
         <tr>
-            <td><code>{{ binding.action }}</code></td>
-            <td>{{ binding.executable }}</td>
-            <td>{{ binding.args }}</td>
-            <td>
-                {% if binding.last_run_at %}{{ binding.last_run_at.strftime('%Y-%m-%d %H:%M:%S') }}{% else %}—{% endif %}
+            <td class="nowrap">
+                <form method="post" action="/admin/actions/{{ binding.id }}/move" class="inline">
+                    <input type="hidden" name="direction" value="up">
+                    <button type="submit" class="ghost small" title="{{ t('admin.move_up') }}">↑</button>
+                </form>
+                <form method="post" action="/admin/actions/{{ binding.id }}/move" class="inline">
+                    <input type="hidden" name="direction" value="down">
+                    <button type="submit" class="ghost small" title="{{ t('admin.move_down') }}">↓</button>
+                </form>
             </td>
-            <td>{{ binding.last_status or "—" }}</td>
+            <td><code>{{ binding.action }}</code></td>
+            <td class="mono small">{{ binding.executable }}</td>
+            <td class="mono small">{{ binding.args }}</td>
             <td>
-                <form method="post" action="/admin/actions/{{ binding.id }}/delete">
-                    <button type="submit" class="danger">{{ t("admin.delete") }}</button>
+                <img class="icon-thumb" src="/admin/actions/{{ binding.id }}/icon" alt=""
+                     onerror="this.style.display='none'">
+            </td>
+            <td class="small">
+                {% if binding.last_run_at %}{{ binding.last_run_at.strftime('%Y-%m-%d %H:%M') }}{% else %}—{% endif %}
+            </td>
+            <td class="small">{{ binding.last_status or "—" }}</td>
+            <td class="nowrap">
+                <a class="button ghost small" href="/admin/actions/{{ binding.id }}/edit">{{ t("admin.edit") }}</a>
+                <form method="post" action="/admin/actions/{{ binding.id }}/delete" class="inline">
+                    <button type="submit" class="ghost small danger">{{ t("admin.delete") }}</button>
                 </form>
             </td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% else %}
 <p class="muted">{{ t("admin.no_actions") }}</p>
 {% endif %}
