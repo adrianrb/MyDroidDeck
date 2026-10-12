@@ -44,7 +44,7 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | S-27 | Import example bindings | 303; keys added once (idempotent); valid seeds | ✅ `test_admin.py`, `test_actions.py` |
 | S-28 | TLS configuration | `tls_enabled` needs both paths; `gen-cert.sh` yields an ssl-loadable cert with the expected SANs | ✅ `test_config.py` |
 | S-29 | Fill a profile with the standard actions | 303; one button per binding, idempotent, own buttons kept, sequential indexes | ✅ `test_profiles.py` |
-| S-30 | Button icons (`GET /icon?action=`) | Serves the extracted PNG; 404 for unknown action/no icon; device auth required; extracts from a real Windows executable and from a Store-app alias (live — skipped without a Windows host); cache is stable per executable | ✅ `test_icons.py` |
+| S-30 | Button icons (`GET /icon?action=`) | Serves the extracted PNG; 404 for unknown action/no icon; device auth required; extracts from a real Windows executable and from a Store-app alias (live — skipped without a Windows host); the shell's *jumbo* icon is preferred (≥48px, crisp on the deck) with the 32px `ExtractAssociatedIcon` as fallback; cache is stable per executable | ✅ `test_icons.py` |
 | S-31 | Runtime settings (`/admin/config`) | Values persist to `data/runtime.json`; invalid port → 400; no-login mode opens the admin (login redirects to config) | ✅ `test_runtime_config.py`, `test_admin_config.py` |
 
 ## Android app (unit / instrumentation)
@@ -61,7 +61,8 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | A-09 | App reports its version | Matches `X.Y.Z` from the build |
 | A-10 | Dispatch outcome mapping | `ok`/`unknown`/`failed`/`timeout` → Enviado / não configurada / Falha | ✅ `DeckStateTest.kt` |
 | A-11 | Dark mode choice | system/light/dark resolution + persisted name (unknown → system); the whole window background + system-bar icons follow the choice (Compose `Surface`, not the framework theme) | ✅ `ThemeModeTest.kt` + device check |
-| A-12 | Button icons | Deck draws the icon from `/icon`, label kept as fallback | ⏳ device check |
+| A-12 | Button icons | Deck draws the icon from `/icon` (real app icon, `FilterQuality.High`); actions without an icon fall back to a label monogram badge | ✅ device check |
+| A-15 | 3D "glass" deck buttons | Keys paint a top→bottom glass gradient, a lighter border + top sheen, a drop shadow and a press scale/haptic; palette follows the active (light/dark) scheme | ✅ device check |
 | A-13 | Server URL normalization | Trim, assume `http://` without a scheme, single trailing slash; blanks/spaces rejected | ✅ `ServerUrlTest.kt` |
 | A-14 | Change server after pairing | Server dialog (from the deck header or the error state) persists the URL, rebuilds the client and reloads; a different server 401s → re-pair | ✅ device check |
 

@@ -7,6 +7,7 @@ import pytest
 
 from app.core.config import settings
 from app.core.icons import (
+    PNG_MAGIC,
     extract_icon,
     host_path,
     icon_cache_file,
@@ -29,6 +30,13 @@ def _bind(client, action="bloco.notas", executable="notepad.exe"):
         data={"action": action, "executable": executable, "args": ""},
         follow_redirects=False,
     )
+
+
+def _png_size(path: Path) -> tuple[int, int]:
+    """Width/height from the PNG IHDR chunk, without an image library."""
+    data = path.read_bytes()
+    assert data[:8] == PNG_MAGIC
+    return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
 
 
 def test_windows_path_translates_mnt_drives():
@@ -85,6 +93,23 @@ def test_extracts_a_real_icon_from_a_windows_executable(tmp_path, monkeypatch):
     assert icon.stat().st_size > 0
     # Second call is served from the cache (same file, no new extraction).
     assert extract_icon("C:\\Windows\\System32\\notepad.exe") == icon
+
+
+@pytest.mark.skipif(
+    POWERSHELL is None or not NOTEPAD.is_file(), reason="precisa de um host Windows"
+)
+def test_extracts_a_high_resolution_icon(tmp_path, monkeypatch):
+    # The shell's jumbo image list keeps the deck keys crisp; a plain
+    # ExtractAssociatedIcon (the fallback) would cap the icon at 32x32.
+    monkeypatch.setattr(settings, "exec_engine", "wsl")
+    monkeypatch.setattr(settings, "icon_cache_dir", str(tmp_path))
+
+    icon = extract_icon("C:\\Windows\\System32\\notepad.exe")
+
+    assert icon is not None
+    width, height = _png_size(icon)
+    assert width == height
+    assert width >= 48
 
 
 @pytest.mark.skipif(

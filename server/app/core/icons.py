@@ -33,20 +33,99 @@ _BASE64_LINE = re.compile(r"[A-Za-z0-9+/=]{16,}")
 # "notepad.exe" are resolved through Get-Command first; Store apps (Paint, …) expose a
 # 0-byte alias under WindowsApps that the interop PATH does not search, so the alias is
 # looked up explicitly. The PNG comes back as base64 on stdout.
+# The shell's "jumbo" image list is asked first (up to 256x256, so the deck keys stay
+# crisp); when the shell exposes nothing bigger, ExtractAssociatedIcon (32x32) is the
+# fallback. The path is spliced in with .replace() (not str.format) so the C# braces
+# stay literal.
+_ICON_PATH_TOKEN = "__MYDROIDDECK_ICON_PATH__"
+
 _PS_SCRIPT = """
 Add-Type -AssemblyName System.Drawing
-$path = {path}
-if (-not (Test-Path -LiteralPath $path)) {{
+Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition @"
+using System;
+using System.Drawing;
+using System.Runtime.InteropServices;
+
+namespace MyDroidDeck
+{
+    public static class JumboIcon
+    {
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct SHFILEINFO
+        {
+            public IntPtr hIcon;
+            public int iIcon;
+            public uint dwAttributes;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public string szDisplayName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)] public string szTypeName;
+        }
+
+        [ComImport]
+        [Guid("46EB5926-582E-4017-9FDF-E8998DAA0950")]
+        [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        private interface IImageList
+        {
+            [PreserveSig] int Add(IntPtr hbmImage, IntPtr hbmMask, ref int pi);
+            [PreserveSig] int ReplaceIcon(int i, IntPtr hicon, ref int pi);
+            [PreserveSig] int SetOverlayImage(int iImage, int iOverlay);
+            [PreserveSig] int Replace(int i, IntPtr hbmImage, IntPtr hbmMask);
+            [PreserveSig] int AddMasked(IntPtr hbmImage, int crMask, ref int pi);
+            [PreserveSig] int Draw(IntPtr pimldp);
+            [PreserveSig] int Remove(int i);
+            [PreserveSig] int GetIcon(int i, int flags, ref IntPtr picon);
+        }
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        private static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref SHFILEINFO psfi, uint cbFileInfo, uint uFlags);
+
+        [DllImport("shell32.dll")]
+        private static extern int SHGetImageList(int iImageList, ref Guid riid, out IImageList ppv);
+
+        [DllImport("user32.dll")]
+        private static extern bool DestroyIcon(IntPtr hIcon);
+
+        private const uint SHGFI_SYSICONINDEX = 0x000004000;
+        private const int SHIL_JUMBO = 0x4;
+        private const int ILD_TRANSPARENT = 0x1;
+
+        public static Icon Load(string path)
+        {
+            SHFILEINFO shfi = new SHFILEINFO();
+            if (SHGetFileInfo(path, 0, ref shfi, (uint)Marshal.SizeOf(shfi), SHGFI_SYSICONINDEX) == IntPtr.Zero)
+            {
+                return null;
+            }
+            Guid iid = new Guid("46EB5926-582E-4017-9FDF-E8998DAA0950");
+            IImageList list;
+            if (SHGetImageList(SHIL_JUMBO, ref iid, out list) != 0)
+            {
+                return null;
+            }
+            IntPtr handle = IntPtr.Zero;
+            if (list.GetIcon(shfi.iIcon, ILD_TRANSPARENT, ref handle) != 0 || handle == IntPtr.Zero)
+            {
+                return null;
+            }
+            try { return (Icon)Icon.FromHandle(handle).Clone(); }
+            finally { DestroyIcon(handle); }
+        }
+    }
+}
+"@
+$path = __MYDROIDDECK_ICON_PATH__
+if (-not (Test-Path -LiteralPath $path)) {
     $cmd = Get-Command $path -ErrorAction SilentlyContinue
-    if ($null -ne $cmd) {{
+    if ($null -ne $cmd) {
         $path = $cmd.Source
-    }} else {{
+    } else {
         $alias = Join-Path $env:LOCALAPPDATA ("Microsoft\\WindowsApps\\" + (Split-Path -Leaf $path))
-        if (Test-Path -LiteralPath $alias) {{ $path = $alias }} else {{ exit 3 }}
-    }}
-}}
-$icon = [System.Drawing.Icon]::ExtractAssociatedIcon($path)
-if ($null -eq $icon) {{ exit 4 }}
+        if (Test-Path -LiteralPath $alias) { $path = $alias } else { exit 3 }
+    }
+}
+$icon = $null
+try { $icon = [MyDroidDeck.JumboIcon]::Load($path) } catch { $icon = $null }
+if ($null -eq $icon) { $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($path) }
+if ($null -eq $icon) { exit 4 }
 $stream = New-Object System.IO.MemoryStream
 $icon.ToBitmap().Save($stream, [System.Drawing.Imaging.ImageFormat]::Png)
 [Convert]::ToBase64String($stream.ToArray())
@@ -123,7 +202,7 @@ def prewarm_icons(executables: Iterable[str]) -> None:
 
 def _render_icon(host_executable: str) -> bytes | None:
     """Ask the Windows host for the program's icon; return the PNG bytes."""
-    script = _PS_SCRIPT.format(path=ps_literal(host_executable))
+    script = _PS_SCRIPT.replace(_ICON_PATH_TOKEN, ps_literal(host_executable))
     try:
         completed = subprocess.run(
             ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
