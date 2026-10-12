@@ -72,7 +72,7 @@ import retrofit2.HttpException
 
 private const val GRID_COLUMNS = 4
 private const val BUTTON_ICON_SIZE = 42
-private const val BUTTON_CORNER_RADIUS = 16
+private const val BUTTON_CORNER_RADIUS = 18
 
 /** Loads the profiles from the server and renders the selected one as a deck. */
 @Composable
@@ -359,7 +359,7 @@ private fun DeckButtonCard(label: String, icon: ImageBitmap?, onClick: () -> Uni
                 scaleY = scale
             }
             .shadow(
-                elevation = if (pressed) 3.dp else 9.dp,
+                elevation = if (pressed) 4.dp else 13.dp,
                 shape = shape,
                 clip = false,
                 ambientColor = glass.shadow,
@@ -378,16 +378,30 @@ private fun DeckButtonCard(label: String, icon: ImageBitmap?, onClick: () -> Uni
             },
         contentAlignment = Alignment.Center,
     ) {
-        // Glass sheen: a highlight across the top and a shade along the bottom edge.
+        // Glass sheen: a glossy highlight across the top and a shade along the bottom
+        // edge, which is what reads as a domed, 3D key cap.
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .background(
                     Brush.verticalGradient(
                         0f to glass.sheen,
-                        0.5f to Color.Transparent,
-                        0.82f to Color.Transparent,
+                        0.45f to Color.Transparent,
+                        0.72f to Color.Transparent,
                         1f to glass.bottomShade,
+                    ),
+                ),
+        )
+        // Specular hairline near the top, fading out at both ends.
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 2.dp)
+                .fillMaxWidth(0.52f)
+                .height(1.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(Color.Transparent, glass.specular, Color.Transparent),
                     ),
                 ),
         )
@@ -448,30 +462,33 @@ private data class GlassPalette(
     val borderTop: Color,
     val borderBottom: Color,
     val sheen: Color,
+    val specular: Color,
     val bottomShade: Color,
     val shadow: Color,
     val iconBacking: Color,
 )
 
 private val DarkGlass = GlassPalette(
-    top = Color(0xFF4B4754),
-    bottom = Color(0xFF232027),
-    borderTop = Color(0x40FFFFFF),
-    borderBottom = Color(0x0DFFFFFF),
-    sheen = Color(0x24FFFFFF),
-    bottomShade = Color(0x40000000),
+    top = Color(0xFF5A5566),
+    bottom = Color(0xFF1B191F),
+    borderTop = Color(0x59FFFFFF),
+    borderBottom = Color(0x0AFFFFFF),
+    sheen = Color(0x38FFFFFF),
+    specular = Color(0x8CFFFFFF),
+    bottomShade = Color(0x59000000),
     shadow = Color(0xFF000000),
-    iconBacking = Color(0x1FFFFFFF),
+    iconBacking = Color(0x24FFFFFF),
 )
 
 private val LightGlass = GlassPalette(
     top = Color(0xFFFFFFFF),
-    bottom = Color(0xFFE6E2EC),
+    bottom = Color(0xFFDDD8E4),
     borderTop = Color(0xFFFFFFFF),
-    borderBottom = Color(0x14000000),
-    sheen = Color(0x59FFFFFF),
-    bottomShade = Color(0x14000000),
-    shadow = Color(0x59000000),
+    borderBottom = Color(0x1F000000),
+    sheen = Color(0x73FFFFFF),
+    specular = Color(0xCCFFFFFF),
+    bottomShade = Color(0x1F000000),
+    shadow = Color(0x66000000),
     iconBacking = Color(0x14000000),
 )
 
