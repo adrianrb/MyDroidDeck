@@ -21,6 +21,13 @@
     <string name="theme_system">Seguir o sistema</string>
     <string name="theme_light">Claro</string>
     <string name="theme_dark">Escuro</string>
+    <string name="deck_arrange">Organizar</string>
+    <string name="deck_arrange_hint">Toque em dois botões para trocá-los de lugar.</string>
+    <string name="deck_arrange_selected">Selecionado: %1$s. Toque em outro botão para trocar.</string>
+    <string name="deck_arrange_done">Concluir</string>
+    <string name="deck_order_saving">Salvando ordem…</string>
+    <string name="deck_order_saved">Ordem salva.</string>
+    <string name="deck_order_failed">Não foi possível salvar a ordem.</string>
     <string name="pairing_title">Parear com o servidor</string>
     <string name="pairing_hint">Digite o código exibido na página de dispositivos do servidor e ajuste a URL se o deck estiver em outro aparelho.</string>
     <string name="pairing_server_url">URL do servidor</string>

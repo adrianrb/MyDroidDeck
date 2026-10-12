@@ -70,6 +70,7 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | A-15 | 3D "glass" deck buttons | Keys paint a top→bottom glass gradient, a lighter border + top sheen, a drop shadow and a press scale/haptic; palette follows the active (light/dark) scheme | ✅ device check |
 | A-13 | Server URL normalization | Trim, assume `http://` without a scheme, single trailing slash; blanks/spaces rejected | ✅ `ServerUrlTest.kt` |
 | A-14 | Change server after pairing | Server dialog (from the deck header or the error state) persists the URL, rebuilds the client and reloads; a different server 401s → re-pair | ✅ device check |
+| A-16 | Reorder buttons in the deck | "Organizar" mode rings a picked button; tapping a second button swaps them and PUTs the full profile back (`/profiles/{id}`), re-indexing 0..n-1; out-of-range/identical swaps are no-ops; failures revert the optimistic order | ✅ `DeckStateTest.kt`, `DtosTest.kt` |
 
 ## End-to-end
 | ID | Case | Expected |

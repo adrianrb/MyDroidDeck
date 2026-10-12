@@ -20,6 +20,13 @@
     <string name="theme_system">Follow the system</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+    <string name="deck_arrange">Arrange</string>
+    <string name="deck_arrange_hint">Tap two buttons to swap them.</string>
+    <string name="deck_arrange_selected">Selected: %1$s. Tap another button to swap.</string>
+    <string name="deck_arrange_done">Done</string>
+    <string name="deck_order_saving">Saving order…</string>
+    <string name="deck_order_saved">Order saved.</string>
+    <string name="deck_order_failed">Could not save the order.</string>
     <string name="pairing_title">Pair with server</string>
     <string name="pairing_hint">Enter the code shown on the server\'s devices page and adjust the URL if the deck runs on another device.</string>
     <string name="pairing_server_url">Server URL</string>

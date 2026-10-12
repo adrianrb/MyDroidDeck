@@ -9,6 +9,8 @@ import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 /** REST surface of the MyDroidDeck server consumed by the app. */
@@ -19,6 +21,10 @@ interface DeckApi {
 
     @GET("profiles")
     suspend fun listProfiles(): List<DeckProfile>
+
+    /** Replaces the profile (name/locale/buttons) with the given ordered buttons. */
+    @PUT("profiles/{id}")
+    suspend fun updateProfile(@Path("id") id: Long, @Body profile: DeckProfile): DeckProfile
 
     @POST("actions")
     suspend fun dispatch(@Body request: ActionRequest): ActionResult

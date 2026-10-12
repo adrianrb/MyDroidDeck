@@ -33,6 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -90,8 +91,17 @@ fun DeckScreen(
     var lastLabel by remember { mutableStateOf<String?>(null) }
     var reloads by remember { mutableStateOf(0) }
     var showServerDialog by remember { mutableStateOf(false) }
+    var arranging by remember { mutableStateOf(false) }
+    var swapSel by remember { mutableStateOf<Int?>(null) }
+    var arrangeNote by remember { mutableStateOf<String?>(null) }
     val icons = rememberDeckIconCache()
     val scope = rememberCoroutineScope()
+    // Arrange-mode messages (kept in composition scope so callbacks can use them).
+    val arrangeHint = stringResource(R.string.deck_arrange_hint)
+    val arrangeSelected = stringResource(R.string.deck_arrange_selected)
+    val arrangeSaving = stringResource(R.string.deck_order_saving)
+    val arrangeSaved = stringResource(R.string.deck_order_saved)
+    val arrangeFailed = stringResource(R.string.deck_order_failed)
 
     LaunchedEffect(reloads) {
         loading = true
@@ -124,11 +134,25 @@ fun DeckScreen(
                 DeckHeader(
                     name = profile.name,
                     withArrows = profiles.size > 1,
-                    onPrevious = { selected = cycleProfileIndex(selected, profiles.size, -1) },
-                    onNext = { selected = cycleProfileIndex(selected, profiles.size, 1) },
+                    onPrevious = {
+                        selected = cycleProfileIndex(selected, profiles.size, -1)
+                        arranging = false
+                        swapSel = null
+                    },
+                    onNext = {
+                        selected = cycleProfileIndex(selected, profiles.size, 1)
+                        arranging = false
+                        swapSel = null
+                    },
                     themeMode = themeMode,
                     onThemeModeChange = onThemeModeChange,
                     onEditServer = { showServerDialog = true },
+                    arranging = arranging,
+                    onToggleArrange = {
+                        arranging = !arranging
+                        swapSel = null
+                        arrangeNote = if (arranging) arrangeHint else null
+                    },
                 )
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(GRID_COLUMNS),
@@ -142,29 +166,90 @@ fun DeckScreen(
                         icons.prefetch(button.action)
                         val iconBytes = icons.bytes(button.action)
                         val icon = remember(iconBytes) { iconBytes?.let(::decodeIcon) }
-                        DeckButtonCard(label = label, icon = icon) {
-                            lastLabel = label
-                            status = null
-                            scope.launch {
-                                status = try {
-                                    statusOf(
-                                        ApiClient.api().dispatch(
-                                            ActionRequest(button.action, button.label),
-                                        ),
-                                    )
-                                } catch (e: HttpException) {
-                                    if (e.code() == 401) onUnauthorized()
-                                    DeckStatus.FAILED
-                                } catch (_: Exception) {
-                                    DeckStatus.FAILED
+                        DeckButtonCard(
+                            label = label,
+                            icon = icon,
+                            highlighted = arranging && swapSel == button.index,
+                            onClick = {
+                                if (!arranging) {
+                                    lastLabel = label
+                                    status = null
+                                    scope.launch {
+                                        status = try {
+                                            statusOf(
+                                                ApiClient.api().dispatch(
+                                                    ActionRequest(button.action, button.label),
+                                                ),
+                                            )
+                                        } catch (e: HttpException) {
+                                            if (e.code() == 401) onUnauthorized()
+                                            DeckStatus.FAILED
+                                        } catch (_: Exception) {
+                                            DeckStatus.FAILED
+                                        }
+                                    }
+                                } else {
+                                    // Arrange mode: first tap selects, second tap swaps,
+                                    // and the new order is persisted to the server.
+                                    val current = swapSel
+                                    when {
+                                        current == null -> {
+                                            swapSel = button.index
+                                            arrangeNote = arrangeSelected.format(label)
+                                        }
+                                        current == button.index -> {
+                                            swapSel = null
+                                            arrangeNote = arrangeHint
+                                        }
+                                        else -> {
+                                            swapSel = null
+                                            arrangeNote = arrangeSaving
+                                            val original = profiles
+                                            val swapped =
+                                                swapButtons(profile.buttons, current, button.index)
+                                            profiles = profiles.mapIndexed { i, p ->
+                                                if (i == selected) p.copy(buttons = swapped) else p
+                                            }
+                                            scope.launch {
+                                                val target =
+                                                    profiles[selected.coerceIn(0, profiles.lastIndex)]
+                                                try {
+                                                    ApiClient.api()
+                                                        .updateProfile(target.id, target)
+                                                    arrangeNote = arrangeSaved
+                                                } catch (e: HttpException) {
+                                                    if (e.code() == 401) {
+                                                        onUnauthorized()
+                                                    } else {
+                                                        profiles = original
+                                                        arrangeNote = arrangeFailed
+                                                    }
+                                                } catch (_: Exception) {
+                                                    profiles = original
+                                                    arrangeNote = arrangeFailed
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-                        }
+                            },
+                        )
                     }
                 }
             }
         }
-        StatusLine(status = status, label = lastLabel)
+        if (arranging) {
+            ArrangeBar(
+                note = arrangeNote ?: arrangeHint,
+                onDone = {
+                    arranging = false
+                    swapSel = null
+                    arrangeNote = null
+                },
+            )
+        } else {
+            StatusLine(status = status, label = lastLabel)
+        }
     }
 
     if (showServerDialog) {
@@ -201,7 +286,26 @@ private fun StatusLine(status: DeckStatus?, label: String?) {
     )
 }
 
-/** Profile name (with arrows when there are several) plus the theme/server menus. */
+/** Footer shown while arranging: current hint/feedback plus a "Done" button. */
+@Composable
+private fun ArrangeBar(note: String, onDone: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = note,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onDone) {
+            Text(stringResource(R.string.deck_arrange_done))
+        }
+    }
+}
+
+/** Profile name (with arrows when there are several) plus the theme/server/menu
+ *  and the arrange (reorder) toggle. */
 @Composable
 private fun DeckHeader(
     name: String,
@@ -211,6 +315,8 @@ private fun DeckHeader(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
     onEditServer: () -> Unit,
+    arranging: Boolean,
+    onToggleArrange: () -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
         Row(
@@ -229,6 +335,7 @@ private fun DeckHeader(
             modifier = Modifier.align(Alignment.CenterEnd),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            ArrangeMenuButton(arranging = arranging, onClick = onToggleArrange)
             ServerMenuButton(onClick = onEditServer)
             ThemeMenu(
                 mode = themeMode,
@@ -236,6 +343,26 @@ private fun DeckHeader(
                 modifier = Modifier,
             )
         }
+    }
+}
+
+/** Toggles the arrange (reorder) mode; tinted while active. */
+@Composable
+private fun ArrangeMenuButton(arranging: Boolean, onClick: () -> Unit) {
+    val description = stringResource(R.string.deck_arrange)
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.semantics { contentDescription = description },
+    ) {
+        Text(
+            text = "\u21C5",
+            style = MaterialTheme.typography.titleMedium,
+            color = if (arranging) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
+        )
     }
 }
 
@@ -338,7 +465,12 @@ private fun MessageState(message: String) {
 
 /** A deck button: a 3D "glass" key (like a real Stream Deck) with the program's icon. */
 @Composable
-private fun DeckButtonCard(label: String, icon: ImageBitmap?, onClick: () -> Unit) {
+private fun DeckButtonCard(
+    label: String,
+    icon: ImageBitmap?,
+    highlighted: Boolean = false,
+    onClick: () -> Unit,
+) {
     val glass = glassPalette()
     val shape = RoundedCornerShape(BUTTON_CORNER_RADIUS.dp)
     val interaction = remember { MutableInteractionSource() }
@@ -405,6 +537,14 @@ private fun DeckButtonCard(label: String, icon: ImageBitmap?, onClick: () -> Uni
                     ),
                 ),
         )
+        // Arrange mode: ring the button the user picked for a swap.
+        if (highlighted) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .border(3.dp, MaterialTheme.colorScheme.primary, shape),
+            )
+        }
         Column(
             modifier = Modifier.fillMaxSize().padding(6.dp),
             verticalArrangement = Arrangement.Center,
