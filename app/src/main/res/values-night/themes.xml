@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dark window theme used when the device is in night mode; keeps the pre-Compose
+     frame dark instead of flashing white. The user's explicit choice is applied by
+     the Compose Surface (see MainActivity). -->
+<resources>
+    <style name="Theme.MyDroidDeck" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+</resources>

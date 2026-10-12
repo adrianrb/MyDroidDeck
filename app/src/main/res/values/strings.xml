@@ -11,6 +11,12 @@
     <string name="deck_status_sent">Enviado: %1$s</string>
     <string name="deck_status_unknown">Ação não configurada no servidor: %1$s</string>
     <string name="deck_status_failed">Falha ao enviar: %1$s</string>
+    <string name="deck_change_server">Trocar servidor</string>
+    <string name="deck_server_button">Servidor</string>
+    <string name="server_dialog_title">Servidor</string>
+    <string name="server_dialog_hint">Endereço do servidor MyDroidDeck (ex.: http://192.168.0.10:56997/). Trocar de servidor pode exigir parear de novo.</string>
+    <string name="server_dialog_save">Salvar</string>
+    <string name="server_dialog_cancel">Cancelar</string>
     <string name="theme_button">Tema</string>
     <string name="theme_system">Seguir o sistema</string>
     <string name="theme_light">Claro</string>

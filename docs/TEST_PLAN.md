@@ -60,8 +60,10 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | A-08 | Profile imported with accented labels | Labels render correctly (UTF-8) |
 | A-09 | App reports its version | Matches `X.Y.Z` from the build |
 | A-10 | Dispatch outcome mapping | `ok`/`unknown`/`failed`/`timeout` → Enviado / não configurada / Falha | ✅ `DeckStateTest.kt` |
-| A-11 | Dark mode choice | system/light/dark resolution + persisted name (unknown → system) | ✅ `ThemeModeTest.kt` |
+| A-11 | Dark mode choice | system/light/dark resolution + persisted name (unknown → system); the whole window background + system-bar icons follow the choice (Compose `Surface`, not the framework theme) | ✅ `ThemeModeTest.kt` + device check |
 | A-12 | Button icons | Deck draws the icon from `/icon`, label kept as fallback | ⏳ device check |
+| A-13 | Server URL normalization | Trim, assume `http://` without a scheme, single trailing slash; blanks/spaces rejected | ✅ `ServerUrlTest.kt` |
+| A-14 | Change server after pairing | Server dialog (from the deck header or the error state) persists the URL, rebuilds the client and reloads; a different server 401s → re-pair | ✅ device check |
 
 ## End-to-end
 | ID | Case | Expected |

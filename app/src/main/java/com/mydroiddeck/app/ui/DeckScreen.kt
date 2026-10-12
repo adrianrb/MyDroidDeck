@@ -24,6 +24,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,6 +48,7 @@ import com.mydroiddeck.app.model.ActionRequest
 import com.mydroiddeck.app.model.DeckButton
 import com.mydroiddeck.app.model.DeckProfile
 import com.mydroiddeck.app.net.ApiClient
+import com.mydroiddeck.app.net.TokenStore
 import com.mydroiddeck.app.ui.theme.MyDroidDeckTheme
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
@@ -69,6 +71,7 @@ fun DeckScreen(
     var status by remember { mutableStateOf<DeckStatus?>(null) }
     var lastLabel by remember { mutableStateOf<String?>(null) }
     var reloads by remember { mutableStateOf(0) }
+    var showServerDialog by remember { mutableStateOf(false) }
     val icons = rememberDeckIconCache()
     val scope = rememberCoroutineScope()
 
@@ -93,7 +96,10 @@ fun DeckScreen(
     Column(modifier = modifier.fillMaxSize().padding(8.dp)) {
         when {
             loading -> LoadingState()
-            failed -> ErrorState(onRetry = { reloads++ })
+            failed -> ErrorState(
+                onRetry = { reloads++ },
+                onChangeServer = { showServerDialog = true },
+            )
             profiles.isEmpty() -> MessageState(stringResource(R.string.deck_empty))
             else -> {
                 val profile = profiles[selected.coerceIn(0, profiles.lastIndex)]
@@ -104,6 +110,7 @@ fun DeckScreen(
                     onNext = { selected = cycleProfileIndex(selected, profiles.size, 1) },
                     themeMode = themeMode,
                     onThemeModeChange = onThemeModeChange,
+                    onEditServer = { showServerDialog = true },
                 )
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(GRID_COLUMNS),
@@ -136,6 +143,20 @@ fun DeckScreen(
         }
         StatusLine(status = status, label = lastLabel)
     }
+
+    if (showServerDialog) {
+        ServerUrlDialog(
+            initialUrl = TokenStore.baseUrl,
+            onDismiss = { showServerDialog = false },
+            onConfirm = { url ->
+                // Rebuilds the Retrofit client (ApiClient watches TokenStore) and
+                // reloads. A different server will usually 401 -> re-pair.
+                TokenStore.baseUrl = url
+                showServerDialog = false
+                reloads++
+            },
+        )
+    }
 }
 
 @Composable
@@ -157,7 +178,7 @@ private fun StatusLine(status: DeckStatus?, label: String?) {
     )
 }
 
-/** Profile name (with arrows when there are several) plus the theme menu. */
+/** Profile name (with arrows when there are several) plus the theme/server menus. */
 @Composable
 private fun DeckHeader(
     name: String,
@@ -166,6 +187,7 @@ private fun DeckHeader(
     onNext: () -> Unit,
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
+    onEditServer: () -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
         Row(
@@ -180,11 +202,29 @@ private fun DeckHeader(
                 IconButton(onClick = onNext) { Text("\u25B6") }
             }
         }
-        ThemeMenu(
-            mode = themeMode,
-            onModeChange = onThemeModeChange,
+        Row(
             modifier = Modifier.align(Alignment.CenterEnd),
-        )
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ServerMenuButton(onClick = onEditServer)
+            ThemeMenu(
+                mode = themeMode,
+                onModeChange = onThemeModeChange,
+                modifier = Modifier,
+            )
+        }
+    }
+}
+
+/** Opens the server-address dialog so the URL can change after pairing. */
+@Composable
+private fun ServerMenuButton(onClick: () -> Unit) {
+    val description = stringResource(R.string.deck_server_button)
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.semantics { contentDescription = description },
+    ) {
+        Text(text = "\u2699", style = MaterialTheme.typography.titleMedium)
     }
 }
 
@@ -245,7 +285,7 @@ private fun LoadingState() {
 }
 
 @Composable
-private fun ErrorState(onRetry: () -> Unit) {
+private fun ErrorState(onRetry: () -> Unit, onChangeServer: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -257,7 +297,12 @@ private fun ErrorState(onRetry: () -> Unit) {
             color = MaterialTheme.colorScheme.error,
         )
         Spacer(Modifier.height(12.dp))
-        Button(onClick = onRetry) { Text(stringResource(R.string.deck_retry)) }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onRetry) { Text(stringResource(R.string.deck_retry)) }
+            OutlinedButton(onClick = onChangeServer) {
+                Text(stringResource(R.string.deck_change_server))
+            }
+        }
     }
 }
 

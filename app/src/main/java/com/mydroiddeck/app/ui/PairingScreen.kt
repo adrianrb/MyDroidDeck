@@ -28,6 +28,8 @@ import com.mydroiddeck.app.R
 import com.mydroiddeck.app.model.PairRequest
 import com.mydroiddeck.app.net.ApiClient
 import com.mydroiddeck.app.net.TokenStore
+import com.mydroiddeck.app.net.isValidBaseUrl
+import com.mydroiddeck.app.net.normalizeBaseUrl
 import kotlinx.coroutines.launch
 
 /** Exchanges a shared pairing code for a per-device token, then calls [onPaired]. */
@@ -98,7 +100,7 @@ fun PairingScreen(
                 error = null
                 // Persist the URL first so the temporary Retrofit instance hits the
                 // server the user just typed.
-                val normalized = serverUrl.trim().let { if (it.endsWith("/")) it else "$it/" }
+                val normalized = normalizeBaseUrl(serverUrl)
                 TokenStore.baseUrl = normalized
                 scope.launch {
                     try {
@@ -114,7 +116,7 @@ fun PairingScreen(
                     }
                 }
             },
-            enabled = !busy && code.isNotBlank() && deviceName.isNotBlank(),
+            enabled = !busy && code.isNotBlank() && deviceName.isNotBlank() && isValidBaseUrl(serverUrl),
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (busy) {

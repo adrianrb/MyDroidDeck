@@ -4,13 +4,12 @@ package com.mydroiddeck.app.net
 object NetConfig {
 
     /**
-     * The Android emulator maps the host machine to 10.0.2.2; a physical device
-     * needs the server's LAN/reachable address instead (users change it on the
-     * pairing screen; it is persisted in [TokenStore.baseUrl]).
+     * The emulator maps the host machine to 10.0.2.2; a physical device needs
+     * the server's LAN address instead (users change it on the pairing screen or
+     * from the deck's Server dialog; it is persisted in [TokenStore.baseUrl]).
      *
-     * HTTPS by default: the server serves TLS with a self-signed dev certificate
-     * (see server/deploy/gen-cert.sh) that this app trusts via
-     * res/xml/network_security_config.xml.
+     * Plain HTTP on the no-login installer's default port (56997): that build
+     * serves no TLS and binds the LAN only when "Visivel na rede" is enabled.
      */
-    const val DEFAULT_BASE_URL = "https://10.0.2.2:8000/"
+    const val DEFAULT_BASE_URL = "http://10.0.2.2:56997/"
 }

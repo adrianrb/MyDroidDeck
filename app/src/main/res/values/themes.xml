@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Compose draws the UI; this framework theme only styles the window. -->
+<!-- Compose draws the UI; this framework theme only styles the window (the
+     background shown for the very first frame, before the Compose Surface is
+     painted). The night variant lives in values-night/. -->
 <resources>
-    <style name="Theme.MyDroidDeck" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.MyDroidDeck" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
 </resources>
