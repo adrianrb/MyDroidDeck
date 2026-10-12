@@ -7,8 +7,11 @@ Turns the `server/` component into an installable app. There are two flavors:
   **HTTP**. It installs **per-user under your HOME** (`%USERPROFILE%\MyDroidDeck`)
   and needs **no elevation**. It opens `/admin/config` in the browser after the
   first install.
-- **Linux/macOS** — a shell installer (`setup/linux/install-server.sh`) with the
-  same behavior.
+- **Linux/WSL** — a per-user shell installer (`setup/linux/install-server.sh`)
+  with the same behavior: detects the environment, installs under your HOME
+  (default `~/MyDroidDeck`), adds Configuração / start / stop / restart /
+  readme.txt shortcuts when a GUI is present (and in the Windows Start menu under
+  WSL), offers autostart at logon, and opens the Configuração page in Firefox.
 
 > ⚠️ **Security.** The no-login fork leaves the admin pages open, and the admin UI
 > registers Windows programs the server will execute. By default the server binds
@@ -52,6 +55,12 @@ page). It offers:
 - **Iniciar no logon do Windows** — adds a hidden launcher
   (`MyDroidDeck.vbs`) to your **Startup** folder (no admin, no console window).
 
+The **Start menu → MyDroidDeck** group gets: *Configuração do MyDroidDeck*
+(starts the server and opens the page in Firefox), *Iniciar servidor*, *Parar
+servidor*, *Reiniciar servidor*, *readme.txt* and *Desinstalar*. The same
+operations are available from a console via `start.cmd`, `stop.cmd`,
+`restart.cmd` and `status.cmd` in the install folder.
+
 Install layout (all under your HOME):
 
 | Path | Contents |
@@ -59,10 +68,12 @@ Install layout (all under your HOME):
 | `%USERPROFILE%\MyDroidDeck\server\` | server code |
 | `%USERPROFILE%\MyDroidDeck\runtime\` | embedded Python |
 | `%USERPROFILE%\MyDroidDeck\tools\` | `control.ps1`, `firewall.ps1` |
+| `%USERPROFILE%\MyDroidDeck\*.cmd` | `start` / `stop` / `restart` / `status` scripts |
+| `%USERPROFILE%\MyDroidDeck\readme.txt` | usage notes |
 | `%USERPROFILE%\MyDroidDeck\data\` | `runtime.json`, `mydroiddeck.db`, `icons\` |
 | `%USERPROFILE%\MyDroidDeck\logs\server.log` | server log |
 
-On finishing, the wizard starts the server, waits ~5 s for it to boot and then
+On finishing, the wizard starts the server, waits until it answers and then
 opens `http://127.0.0.1:56997/` in the browser (the wait avoids a first-request
 404; the root redirects to the Configuração page).
 
@@ -77,7 +88,7 @@ powershell -ExecutionPolicy Bypass -File "%USERPROFILE%\MyDroidDeck\tools\firewa
 ### Uninstall
 
 Use *Apps & features* (or the Start-menu shortcut). Uninstall removes the Startup
-entry; your `data\` folder is kept.
+entry and the Start-menu shortcuts; your `data\` folder is kept.
 
 ## The Configuração page (`/admin/config`)
 
@@ -101,18 +112,63 @@ restart button). The settings live in `data/runtime.json`, read by
 
 On the Windows install the launcher sets `MYDROIDDECK_ADMIN_AUTH_ENABLED=false`
 and points `MYDROIDDECK_CONTROL_HELPER` at `tools\control.ps1`; on machines without
-that helper the toggles are simply recorded (no error).
+that helper the toggles are simply recorded (no error). On the Linux/WSL install the
+launcher records those settings too, but the page's restart button has no Windows
+helper — control the server with `bin/mydroiddeck start|stop|restart|status` instead
+(also reachable from the desktop / Start-menu shortcuts).
 
-## Linux / macOS
+## Linux / WSL
+
+A per-user, self-contained shell installer (no root needed). It detects the
+environment and prerequisites, installs under your HOME and, when it can,
+autostarts the server and adds the shortcuts:
 
 ```bash
-setup/linux/install-server.sh                 # --prefix DIR --port N --no-service
+setup/linux/install-server.sh
+# --prefix DIR   --port N   --autostart auto|systemd|xdg|profile|none
+# --no-desktop   --no-open  --no-start   --install-deps   --yes
+# --uninstall    --dry-run
 ```
 
-Creates a virtualenv under `~/.local/share/mydroiddeck/venv`, installs `server/`,
-writes the `~/.local/share/mydroiddeck/bin/mydroiddeck` launcher, seeds
-`data/runtime.json`, and (with systemd) installs the `mydroiddeck.service` user
-unit. It then opens `http://127.0.0.1:56997/admin/config`.
+What it does:
+
+1. **Detects the environment** — distro, package manager, `python3 >= 3.10` +
+   `venv`, a GUI (`$DISPLAY`/`$WAYLAND_DISPLAY` + `xdg-open`) and, under WSL, the
+   Windows interop. With `--install-deps` (or a prompt) it runs the right
+   `apt/dnf/pacman/apk/zypper` command through `sudo` for missing prerequisites.
+2. **Installs under your HOME** — default `~/MyDroidDeck` (change with `--prefix`).
+   It copies `server/` next to a fresh `venv/`, so the git clone can be removed
+   afterwards.
+3. **Adds shortcuts** — `.desktop` entries (Configuração / start / stop / restart /
+   readme.txt) on your Desktop and in `~/.local/share/applications` on a Linux GUI;
+   under WSL it also creates the same set in the Windows **Start menu**
+   (`MyDroidDeck\`) plus `MyDroidDeck.lnk` on the Windows **Desktop** (launching
+   `wsl.exe`).
+4. **Offers autostart at logon** — `systemd --user` when available, else an XDG
+   autostart entry (GUI) or a guarded block in `~/.profile` (WSL). Choose with
+   `--autostart`; use `--autostart none` to skip.
+
+Layout (default `~/MyDroidDeck`):
+
+| Path | Contents |
+| --- | --- |
+| `server/` | server code (copied) |
+| `venv/` | Python virtualenv |
+| `bin/mydroiddeck` | server control: `start` / `stop` / `restart` / `status` / `open` / `readme` (no argument = foreground, used by systemd) |
+| `bin/mydroiddeck-open` | alias of `mydroiddeck open` (start-if-needed + open the page) |
+| `tools/windows-shortcut.ps1` | Windows Desktop/Start-menu shortcuts (WSL only) |
+| `readme.txt` | usage notes |
+| `data/` | `runtime.json`, `mydroiddeck.db`, `icons/` |
+| `logs/server.log` | server log |
+
+On finishing it starts the server and opens `http://127.0.0.1:56997/` in
+**Firefox** — never the Windows default browser (override the path with
+`MYDROIDDECK_WIN_BROWSER`).
+
+`--uninstall` removes the autostart entry and the shortcuts (it then asks whether
+to delete the install folder too).
+
+Smoke tests: `setup/tests/test-install-server.sh`.
 
 ## Troubleshooting
 

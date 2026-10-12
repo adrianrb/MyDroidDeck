@@ -8,9 +8,10 @@
 ; What it does: installs the bundled server under the user's HOME
 ; (%USERPROFILE%\MyDroidDeck) with NO elevation, keeps data/logs beside it, can
 ; add a hidden launcher to the user's Startup folder, and on finish starts the
-; server, waits ~5s and opens http://127.0.0.1:56997/ in the browser (the root
-; redirects to /admin/config). The admin pages have NO login; the REST API still
-; uses device tokens.
+; server, waits until it answers, then opens http://127.0.0.1:56997/ in the
+; browser (the root redirects to /admin/config). It also adds Start-menu
+; shortcuts for Configuracao, Iniciar, Parar, Reiniciar and readme.txt. The
+; admin pages have NO login; the REST API still uses device tokens.
 ;
 ; Note: enabling LAN access ("Visivel na rede") also needs a Windows Firewall
 ; rule, which requires an elevated PowerShell once - see setup/README.md.
@@ -50,14 +51,25 @@ Name: "startup"; Description: "Iniciar o servidor no logon do Windows"; GroupDes
 
 [Files]
 Source: "{#StageDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+; Server start/stop/restart/status scripts (also usable from a console).
+Source: "{#SourcePath}\start.cmd"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourcePath}\stop.cmd"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourcePath}\restart.cmd"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourcePath}\status.cmd"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourcePath}\..\readme.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Dirs]
 Name: "{app}\data"
 Name: "{app}\logs"
 
 [Icons]
-Name: "{group}\Iniciar servidor MyDroidDeck"; Filename: "{app}\{#AppExeName}"
+; The "Configuracao" shortcut starts the server and opens the admin page in the
+; owner's browser (Firefox). The server-control shortcuts are silent.
 Name: "{group}\Configuracao do MyDroidDeck"; Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\tools\open-console.ps1"""; Comment: "Iniciar o servidor e abrir a Configuracao (Firefox)"
+Name: "{group}\Iniciar servidor MyDroidDeck"; Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action start"; Comment: "Ligar o servidor"
+Name: "{group}\Parar servidor MyDroidDeck"; Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action stop"; Comment: "Desligar o servidor"
+Name: "{group}\Reiniciar servidor MyDroidDeck"; Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action restart"; Comment: "Reiniciar o servidor"
+Name: "{group}\readme.txt"; Filename: "{app}\readme.txt"; Comment: "Como usar o MyDroidDeck"
 Name: "{group}\Desinstalar MyDroidDeck"; Filename: "{uninstallexe}"
 
 [Run]
