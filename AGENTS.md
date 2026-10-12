@@ -17,8 +17,12 @@ components build green. This is the only instruction file; no CI, pre-commit, or
   - Android SDK → `C:\desenv\Android\Sdk` (platform-tools, platforms;android-34,
     build-tools;34.0.0). `JAVA_HOME`/`ANDROID_HOME` are **not** set globally.
   - `adb` → `C:\desenv\Android\Sdk\platform-tools\adb.exe`.
-  - Default browser on this PC → `C:\Desenv\Util\Firefox\firefox.exe` (open URLs
-    with it; the Windows installer prefers it via `tools\open-console.ps1`).
+  - **Browser: never the Windows default** (`msedge.exe`). Always open URLs with
+    the owner's chosen browser → `C:\Desenv\Util\Firefox\firefox.exe` (override with
+    `MYDROIDDECK_BROWSER` on Windows / `MYDROIDDECK_WIN_BROWSER` on WSL). The
+    Windows installer uses `tools\open-console.ps1`; the Linux/WSL installer uses
+    `bin/mydroiddeck-open`. If that browser is missing, show the URL — do not fall
+    back to the default association.
 - **Build/test `app/` from Windows, not WSL**: the SDK ships Windows binaries that
   Linux `gradlew` cannot use. Use the helper (sets `JAVA_HOME`/`ANDROID_HOME`, then
   calls the wrapper):
