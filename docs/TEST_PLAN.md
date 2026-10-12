@@ -61,7 +61,7 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | A-09 | App reports its version | Matches `X.Y.Z` from the build |
 | A-10 | Dispatch outcome mapping | `ok`/`unknown`/`failed`/`timeout` → Enviado / não configurada / Falha | ✅ `DeckStateTest.kt` |
 | A-11 | Dark mode choice | system/light/dark resolution + persisted name (unknown → system); the whole window background + system-bar icons follow the choice (Compose `Surface`, not the framework theme) | ✅ `ThemeModeTest.kt` + device check |
-| A-12 | Button icons | Deck draws the icon from `/icon` (real app icon, `FilterQuality.High`); actions without an icon fall back to a label monogram badge | ✅ device check |
+| A-12 | Button icons | Deck draws the icon from `/icon` (real app icon, `FilterQuality.High`) — the snapshot read happens in the button's own scope, so a late-arriving icon repaints it; actions without an icon fall back to a label monogram badge; each action is fetched once | ✅ `DeckIconCacheTest.kt` + device check |
 | A-15 | 3D "glass" deck buttons | Keys paint a top→bottom glass gradient, a lighter border + top sheen, a drop shadow and a press scale/haptic; palette follows the active (light/dark) scheme | ✅ device check |
 | A-13 | Server URL normalization | Trim, assume `http://` without a scheme, single trailing slash; blanks/spaces rejected | ✅ `ServerUrlTest.kt` |
 | A-14 | Change server after pairing | Server dialog (from the deck header or the error state) persists the URL, rebuilds the client and reloads; a different server 401s → re-pair | ✅ device check |

@@ -17,38 +17,46 @@ import com.mydroiddeck.app.net.ApiClient
  * (see ``app.core.icons``), so the deck shows the program's *real* icon. Missing
  * icons (404 — unknown action or a program without an icon) are cached as `null`,
  * so every action is fetched at most once per screen.
+ *
+ * [bytes] is a plain function on purpose: reading the snapshot map from the button's
+ * own composition scope is what makes a loaded icon repaint. Returning the icon from
+ * a `@Composable` helper would record that read in the helper's scope instead, so the
+ * button would keep the stale `null` until something else forced it to recompose.
  */
 @Stable
-class DeckIconCache {
+class DeckIconCache(
+    private val fetch: suspend (String) -> ByteArray? = { action ->
+        ApiClient.api().icon(action).use { body -> body.bytes() }
+    },
+) {
 
-    private val icons = mutableStateMapOf<String, ImageBitmap?>()
+    private val icons = mutableStateMapOf<String, ByteArray?>()
     private val requested = mutableSetOf<String>()
 
-    /** Icon for [action], or `null` while loading / when the action has none. */
+    /** Raw PNG for [action], or `null` while loading / when the action has no icon. */
+    fun bytes(action: String): ByteArray? = icons[action]
+
+    /** Kicks off the one-shot load of [action]; call it from the button's composition. */
     @Composable
-    fun icon(action: String): ImageBitmap? {
-        val loaded = icons[action]
-        if (!requested.contains(action)) {
-            LaunchedEffect(action) { load(action) }
-        }
-        return loaded
+    fun prefetch(action: String) {
+        LaunchedEffect(action) { load(action) }
     }
 
-    private suspend fun load(action: String) {
+    /** Fetches [action] once and stores the outcome (the PNG, or `null` on failure). */
+    internal suspend fun load(action: String) {
         if (!requested.add(action)) return
-        icons[action] = fetch(action)
-    }
-
-    private suspend fun fetch(action: String): ImageBitmap? = try {
-        ApiClient.api().icon(action).use { body ->
-            val bytes = body.bytes()
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        icons[action] = try {
+            fetch(action)
+        } catch (_: Exception) {
+            // 404 (no icon), offline, or token revoked: the button keeps its label.
+            null
         }
-    } catch (_: Exception) {
-        // 404 (no icon), offline, or token revoked: the button keeps its label.
-        null
     }
 }
+
+/** Decodes the PNG served by the server into Compose's bitmap type. */
+fun decodeIcon(bytes: ByteArray): ImageBitmap? =
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
 
 /** Remembers an icon cache for the current screen. */
 @Composable

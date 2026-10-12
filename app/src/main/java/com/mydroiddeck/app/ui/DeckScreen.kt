@@ -137,7 +137,12 @@ fun DeckScreen(
                 ) {
                     items(profile.buttons, key = { it.index }) { button ->
                         val label = buttonLabel(button)
-                        DeckButtonCard(label = label, icon = icons.icon(button.action)) {
+                        // Read (not fetch) the icon in the button's own scope so a
+                        // late-arriving icon actually repaints it.
+                        icons.prefetch(button.action)
+                        val iconBytes = icons.bytes(button.action)
+                        val icon = remember(iconBytes) { iconBytes?.let(::decodeIcon) }
+                        DeckButtonCard(label = label, icon = icon) {
                             lastLabel = label
                             status = null
                             scope.launch {
