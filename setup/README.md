@@ -9,8 +9,9 @@ Turns the `server/` component into an installable app. There are two flavors:
   first install.
 - **Linux/WSL** — a per-user shell installer (`setup/linux/install-server.sh`)
   with the same behavior: detects the environment, installs under your HOME
-  (default `~/MyDroidDeck`), adds a desktop shortcut when a GUI is present,
-  offers autostart at logon, and opens the Configuração page in Firefox.
+  (default `~/MyDroidDeck`), adds Configuração / start / stop / restart /
+  readme.txt shortcuts when a GUI is present (and in the Windows Start menu under
+  WSL), offers autostart at logon, and opens the Configuração page in Firefox.
 
 > ⚠️ **Security.** The no-login fork leaves the admin pages open, and the admin UI
 > registers Windows programs the server will execute. By default the server binds
@@ -54,6 +55,12 @@ page). It offers:
 - **Iniciar no logon do Windows** — adds a hidden launcher
   (`MyDroidDeck.vbs`) to your **Startup** folder (no admin, no console window).
 
+The **Start menu → MyDroidDeck** group gets: *Configuração do MyDroidDeck*
+(starts the server and opens the page in Firefox), *Iniciar servidor*, *Parar
+servidor*, *Reiniciar servidor*, *readme.txt* and *Desinstalar*. The same
+operations are available from a console via `start.cmd`, `stop.cmd`,
+`restart.cmd` and `status.cmd` in the install folder.
+
 Install layout (all under your HOME):
 
 | Path | Contents |
@@ -61,10 +68,12 @@ Install layout (all under your HOME):
 | `%USERPROFILE%\MyDroidDeck\server\` | server code |
 | `%USERPROFILE%\MyDroidDeck\runtime\` | embedded Python |
 | `%USERPROFILE%\MyDroidDeck\tools\` | `control.ps1`, `firewall.ps1` |
+| `%USERPROFILE%\MyDroidDeck\*.cmd` | `start` / `stop` / `restart` / `status` scripts |
+| `%USERPROFILE%\MyDroidDeck\readme.txt` | usage notes |
 | `%USERPROFILE%\MyDroidDeck\data\` | `runtime.json`, `mydroiddeck.db`, `icons\` |
 | `%USERPROFILE%\MyDroidDeck\logs\server.log` | server log |
 
-On finishing, the wizard starts the server, waits ~5 s for it to boot and then
+On finishing, the wizard starts the server, waits until it answers and then
 opens `http://127.0.0.1:56997/` in the browser (the wait avoids a first-request
 404; the root redirects to the Configuração page).
 
@@ -79,7 +88,7 @@ powershell -ExecutionPolicy Bypass -File "%USERPROFILE%\MyDroidDeck\tools\firewa
 ### Uninstall
 
 Use *Apps & features* (or the Start-menu shortcut). Uninstall removes the Startup
-entry; your `data\` folder is kept.
+entry and the Start-menu shortcuts; your `data\` folder is kept.
 
 ## The Configuração page (`/admin/config`)
 
@@ -104,15 +113,15 @@ restart button). The settings live in `data/runtime.json`, read by
 On the Windows install the launcher sets `MYDROIDDECK_ADMIN_AUTH_ENABLED=false`
 and points `MYDROIDDECK_CONTROL_HELPER` at `tools\control.ps1`; on machines without
 that helper the toggles are simply recorded (no error). On the Linux/WSL install the
-launcher records those settings too, but the *Iniciar no logon* / restart controls
-have no Windows helper — manage autostart with the installer's `--autostart` and
-restart by re-running `bin/mydroiddeck-open`.
+launcher records those settings too, but the page's restart button has no Windows
+helper — control the server with `bin/mydroiddeck start|stop|restart|status` instead
+(also reachable from the desktop / Start-menu shortcuts).
 
 ## Linux / WSL
 
 A per-user, self-contained shell installer (no root needed). It detects the
 environment and prerequisites, installs under your HOME and, when it can,
-autostarts the server and adds a shortcut:
+autostarts the server and adds the shortcuts:
 
 ```bash
 setup/linux/install-server.sh
@@ -130,9 +139,10 @@ What it does:
 2. **Installs under your HOME** — default `~/MyDroidDeck` (change with `--prefix`).
    It copies `server/` next to a fresh `venv/`, so the git clone can be removed
    afterwards.
-3. **Adds a shortcut** — a `.desktop` entry on your Desktop and in
-   `~/.local/share/applications` on a Linux GUI; under WSL it also creates
-   `MyDroidDeck.lnk` on the Windows **Desktop** and **Start menu** (launching
+3. **Adds shortcuts** — `.desktop` entries (Configuração / start / stop / restart /
+   readme.txt) on your Desktop and in `~/.local/share/applications` on a Linux GUI;
+   under WSL it also creates the same set in the Windows **Start menu**
+   (`MyDroidDeck\`) plus `MyDroidDeck.lnk` on the Windows **Desktop** (launching
    `wsl.exe`).
 4. **Offers autostart at logon** — `systemd --user` when available, else an XDG
    autostart entry (GUI) or a guarded block in `~/.profile` (WSL). Choose with
@@ -144,9 +154,10 @@ Layout (default `~/MyDroidDeck`):
 | --- | --- |
 | `server/` | server code (copied) |
 | `venv/` | Python virtualenv |
-| `bin/mydroiddeck` | launcher (reads `data/runtime.json`) |
-| `bin/mydroiddeck-open` | start-if-needed + open the Configuração page |
-| `tools/windows-shortcut.ps1` | Windows Desktop/Start-menu shortcut (WSL only) |
+| `bin/mydroiddeck` | server control: `start` / `stop` / `restart` / `status` / `open` / `readme` (no argument = foreground, used by systemd) |
+| `bin/mydroiddeck-open` | alias of `mydroiddeck open` (start-if-needed + open the page) |
+| `tools/windows-shortcut.ps1` | Windows Desktop/Start-menu shortcuts (WSL only) |
+| `readme.txt` | usage notes |
 | `data/` | `runtime.json`, `mydroiddeck.db`, `icons/` |
 | `logs/server.log` | server log |
 

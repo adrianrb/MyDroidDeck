@@ -3,14 +3,15 @@
 #
 # Per-user and self-contained: installs under $HOME/MyDroidDeck by default (no root
 # needed), creates a virtualenv, seeds data/runtime.json (no login, port 56997) and,
-# optionally, autostarts the server at logon and adds a desktop shortcut. On WSL it
-# opens the Configuration page in the Windows browser.
+# optionally, autostarts the server at logon and adds shortcuts for Configuração /
+# start / stop / restart / readme.txt. On WSL it opens the Configuration page in the
+# Windows browser and creates the shortcuts in the Windows Start menu.
 #
 # Usage: setup/linux/install-server.sh [options]
 #   --prefix DIR        install location (default: $HOME/MyDroidDeck)
 #   --port N            TCP port (default: 56997)
 #   --autostart MODE    auto|systemd|xdg|profile|none (default: auto)
-#   --no-desktop        skip the desktop / Start-menu shortcut
+#   --no-desktop        skip the desktop / Start-menu shortcuts
 #   --no-open           do not open the browser
 #   --no-start          do not start the server now
 #   --install-deps      install missing prerequisites with sudo (asks first)
@@ -18,6 +19,8 @@
 #   --uninstall         remove the autostart entry and shortcuts, then exit
 #   --dry-run           print what would be done; change nothing
 #   -h, --help          this help
+#
+# After install, control the server with:  bin/mydroiddeck start|stop|restart|status
 set -euo pipefail
 
 APP_NAME="MyDroidDeck"
@@ -146,7 +149,7 @@ while [ $# -gt 0 ]; do
     --uninstall) UNINSTALL=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h | --help)
-        sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+        sed -n '2,23p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
         exit 0
         ;;
     *) die "opção desconhecida: $1" ;;
@@ -445,10 +448,15 @@ disable_autostart() {
         run systemctl --user disable --now mydroiddeck.service >/dev/null 2>&1 || true
     fi
     [ "$DRY_RUN" = 1 ] || rm -f "$HOME/.config/systemd/user/mydroiddeck.service"
-    # xdg autostart + desktop/applications entries
+    # xdg autostart + the desktop / applications entries (config/start/stop/restart/readme)
     [ "$DRY_RUN" = 1 ] || rm -f "$XDG_AUTOSTART"
-    [ "$DRY_RUN" = 1 ] || rm -f "$(desktop_dir)/$APP_NAME.desktop"
-    [ "$DRY_RUN" = 1 ] || rm -f "$APPS_DIR/$APP_NAME.desktop"
+    local d s
+    for d in "$APPS_DIR" "$(desktop_dir)"; do
+        for s in config start stop restart readme; do
+            [ "$DRY_RUN" = 1 ] || rm -f "$d/mydroiddeck-$s.desktop"
+        done
+        [ "$DRY_RUN" = 1 ] || rm -f "$d/$APP_NAME.desktop"
+    done
     if [ "$IS_WSL" = yes ] && [ "$HAS_INTEROP" = yes ]; then
         win_shortcut remove || true
     fi
@@ -464,13 +472,13 @@ desktop_dir() {
     echo "$dir"
 }
 
-desktop_entry() { # PATH  EXEC
+desktop_entry() { # PATH  NAME  SUBCOMMAND
     write_file "$1" <<EOF
 [Desktop Entry]
 Type=Application
-Name=$APP_NAME
+Name=$2
 Comment=Stream Deck controller (server)
-Exec=$2
+Exec="$BIN/mydroiddeck" $3
 Icon=utilities-terminal
 Terminal=false
 Categories=Utility;Network;
@@ -492,12 +500,12 @@ win_shortcut() { # add|remove
         helper_win="$(wslpath -w "$helper" 2>/dev/null || echo "$helper")"
     fi
     if [ "$DRY_RUN" = 1 ]; then
-        printf '[dry-run] powershell.exe -File %s -Action %s -Target %s\n' "$helper_win" "$action" "$BIN/mydroiddeck-open"
+        printf '[dry-run] powershell.exe -File %s -Action %s -Prefix %s\n' "$helper_win" "$action" "$PREFIX"
         return 0
     fi
     [ -f "$helper" ] || return 1
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$helper_win" \
-        -Action "$action" -Target "$BIN/mydroiddeck-open" -Distro "${WSL_DISTRO_NAME:-}" >/dev/null 2>&1
+        -Action "$action" -Prefix "$PREFIX" -Distro "${WSL_DISTRO_NAME:-}" >/dev/null 2>&1
 }
 
 make_shortcuts() {
@@ -505,19 +513,32 @@ make_shortcuts() {
         info "atalhos: ignorados (--no-desktop)"
         return 0
     fi
-    if [ "$IS_WSL" = yes ] && [ "$HAS_INTEROP" = yes ]; then
-        if [ "$GUI_OK" = yes ]; then
-            desktop_entry "$(desktop_dir)/$APP_NAME.desktop" "$BIN/mydroiddeck-open"
-        fi
-        desktop_entry "$APPS_DIR/$APP_NAME.desktop" "$BIN/mydroiddeck-open"
+
+    local with_gui=0 with_win=0
+    [ "$GUI_OK" = yes ] && with_gui=1
+    if [ "$IS_WSL" = yes ] && [ "$HAS_INTEROP" = yes ]; then with_win=1; fi
+
+    # Desktop icon (only when a GUI is actually visible).
+    if [ "$with_gui" = 1 ]; then
+        desktop_entry "$(desktop_dir)/mydroiddeck-config.desktop" "Configuração" open
+    fi
+
+    # Application-menu entries: Configuração / start / stop / restart / readme.
+    if [ "$with_gui" = 1 ] || [ "$with_win" = 1 ]; then
+        desktop_entry "$APPS_DIR/mydroiddeck-config.desktop" "Configuração" open
+        desktop_entry "$APPS_DIR/mydroiddeck-start.desktop" "Iniciar servidor" start
+        desktop_entry "$APPS_DIR/mydroiddeck-stop.desktop" "Parar servidor" stop
+        desktop_entry "$APPS_DIR/mydroiddeck-restart.desktop" "Reiniciar servidor" restart
+        desktop_entry "$APPS_DIR/mydroiddeck-readme.desktop" "readme.txt" readme
+    fi
+
+    if [ "$with_win" = 1 ]; then
         if win_shortcut add; then
-            info "atalhos: Desktop e Menu Iniciar do Windows (via wsl.exe)"
+            info "atalhos: Menu Iniciar do Windows + $APPS_DIR"
         else
-            warn "não consegui criar o atalho do Windows."
+            warn "não consegui criar os atalhos do Windows."
         fi
-    elif [ "$GUI_OK" = yes ]; then
-        desktop_entry "$(desktop_dir)/$APP_NAME.desktop" "$BIN/mydroiddeck-open"
-        desktop_entry "$APPS_DIR/$APP_NAME.desktop" "$BIN/mydroiddeck-open"
+    elif [ "$with_gui" = 1 ]; then
         info "atalhos: $(desktop_dir) e $APPS_DIR"
     else
         info "atalhos: sem GUI detectada, nada a fazer"
@@ -556,20 +577,11 @@ open_url() {
 }
 
 start_detached() {
-    if have systemctl && systemctl --user show-environment >/dev/null 2>&1; then
-        run systemctl --user start mydroiddeck.service >/dev/null 2>&1 || true
-        return 0
-    fi
-    if pgrep -f "$PREFIX/server/launch.py" >/dev/null 2>&1; then
-        info "servidor já em execução"
-        return 0
-    fi
     if [ "$DRY_RUN" = 1 ]; then
         printf '[dry-run] iniciar %s em segundo plano\n' "$BIN/mydroiddeck"
         return 0
     fi
-    mkdir -p "$PREFIX/logs"
-    (setsid nohup "$BIN/mydroiddeck" >>"$PREFIX/logs/server.log" 2>&1 </dev/null &) 2>/dev/null || true
+    "$BIN/mydroiddeck" start
 }
 
 wait_healthy() {
@@ -618,6 +630,11 @@ run mkdir -p "$PREFIX" "$DATA" "$BIN" "$PREFIX/logs"
 # Self-contained: keep the server code next to the venv, so the clone can go away.
 copy_server "$PREFIX/server"
 
+# Usage notes (readme.txt) shipped next to the server.
+if [ -f "$ROOT/setup/readme.txt" ]; then
+    run cp "$ROOT/setup/readme.txt" "$PREFIX/readme.txt"
+fi
+
 if [ "$DRY_RUN" = 1 ]; then
     printf '[dry-run] criar virtualenv em %s\n' "$VENV"
     printf '[dry-run] %s/bin/pip install -e %s/server\n' "$VENV" "$PREFIX"
@@ -629,116 +646,230 @@ else
     "$VENV/bin/pip" install --quiet -e "$PREFIX/server"
 fi
 
-write_file "$BIN/mydroiddeck" <<EOF
+write_file "$BIN/mydroiddeck" <<'MD_EOF'
 #!/usr/bin/env bash
-# $APP_NAME launcher — honors data/runtime.json (network/port).
-set -euo pipefail
-export MYDROIDDECK_DATABASE_URL="sqlite:///$DATA/mydroiddeck.db"
-export MYDROIDDECK_RUNTIME_CONFIG_FILE="$DATA/runtime.json"
-export MYDROIDDECK_ICON_CACHE_DIR="$DATA/icons"
-export MYDROIDDECK_ADMIN_AUTH_ENABLED="\${MYDROIDDECK_ADMIN_AUTH_ENABLED:-false}"
-cd "$PREFIX/server"
-exec "$VENV/bin/python" "$PREFIX/server/launch.py"
-EOF
-run chmod +x "$BIN/mydroiddeck"
-
-write_file "$BIN/mydroiddeck-open" <<'OPEN_EOF'
-#!/usr/bin/env bash
-# Start the server if needed and open the Configuration page.
+# MyDroidDeck server control — run | start | stop | restart | status | open | readme
+#
+#   (no argument) / run   run the server in the foreground (used by systemd)
+#   start                 start it in the background (systemd --user if available)
+#   stop                  stop it
+#   restart               stop, then start
+#   status                is it running, and which version?
+#   open                  start it if needed and open the Configuration page
+#   readme                open readme.txt
 set -euo pipefail
 
 BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PREFIX="$(cd "$BIN_DIR/.." && pwd)"
 DATA="$PREFIX/data"
 LOG="$PREFIX/logs/server.log"
+VENV="$PREFIX/venv"
+LAUNCH="$PREFIX/server/launch.py"
 
 PORT="$(sed -n 's/.*"port"[[:space:]]*:[[:space:]]*\([0-9]\+\).*/\1/p' "$DATA/runtime.json" 2>/dev/null | head -1)"
 PORT="${PORT:-56997}"
 URL="http://127.0.0.1:$PORT/"
 
-is_running() { pgrep -f "$PREFIX/server/launch.py" >/dev/null 2>&1; }
+have() { command -v "$1" >/dev/null 2>&1; }
+is_running() { pgrep -f "$LAUNCH" >/dev/null 2>&1; }
+has_systemd() { have systemctl && systemctl --user show-environment >/dev/null 2>&1; }
 
-if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
-    systemctl --user start mydroiddeck.service >/dev/null 2>&1 || true
-elif ! is_running; then
-    mkdir -p "$PREFIX/logs"
-    (setsid nohup "$BIN_DIR/mydroiddeck" >>"$LOG" 2>&1 </dev/null &) 2>/dev/null || true
-fi
+run_foreground() {
+    export MYDROIDDECK_DATABASE_URL="sqlite:///$DATA/mydroiddeck.db"
+    export MYDROIDDECK_RUNTIME_CONFIG_FILE="$DATA/runtime.json"
+    export MYDROIDDECK_ICON_CACHE_DIR="$DATA/icons"
+    export MYDROIDDECK_ADMIN_AUTH_ENABLED="${MYDROIDDECK_ADMIN_AUTH_ENABLED:-false}"
+    cd "$PREFIX/server"
+    exec "$VENV/bin/python" "$LAUNCH"
+}
 
-if command -v curl >/dev/null 2>&1; then
+wait_healthy() {
+    have curl || return 0
+    local i
     for ((i = 0; i < 20; i++)); do
-        curl -fsS --max-time 1 "http://127.0.0.1:$PORT/health" >/dev/null 2>&1 && break
+        curl -fsS --max-time 1 "${URL}health" >/dev/null 2>&1 && return 0
         sleep 0.5
     done
-fi
+    return 1
+}
+
+start_server() {
+    if has_systemd; then
+        systemctl --user start mydroiddeck.service >/dev/null 2>&1 || true
+        return 0
+    fi
+    if is_running; then
+        echo "servidor já em execução"
+        return 0
+    fi
+    mkdir -p "$PREFIX/logs"
+    (setsid nohup "$BIN_DIR/mydroiddeck" >>"$LOG" 2>&1 </dev/null &) 2>/dev/null || true
+    echo "servidor iniciado"
+}
+
+stop_server() {
+    local was=0
+    if has_systemd; then
+        systemctl --user stop mydroiddeck.service >/dev/null 2>&1 && was=1 || true
+    fi
+    if is_running; then
+        pkill -f "$LAUNCH" >/dev/null 2>&1 && was=1 || true
+        sleep 0.5
+    fi
+    if [ "$was" = 1 ]; then echo "servidor parado"; else echo "servidor não está em execução"; fi
+}
 
 # Owner's browser — never the Windows default (Edge). Override with MYDROIDDECK_WIN_BROWSER.
-WIN_BROWSER="${MYDROIDDECK_WIN_BROWSER:-C:\\Desenv\\Util\\Firefox\\firefox.exe}"
-if grep -qi microsoft /proc/version 2>/dev/null || [ -n "${WSL_DISTRO_NAME:-}" ]; then
-    if command -v powershell.exe >/dev/null 2>&1; then
-        MNT=""
-        if command -v wslpath >/dev/null 2>&1; then
-            MNT="$(wslpath -u "$WIN_BROWSER" 2>/dev/null || true)"
+open_url() {
+    local url="$1"
+    local win_browser="${MYDROIDDECK_WIN_BROWSER:-C:\\Desenv\\Util\\Firefox\\firefox.exe}"
+    if { [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qi microsoft /proc/version 2>/dev/null; } && have powershell.exe; then
+        local mnt=""
+        if have wslpath; then
+            mnt="$(wslpath -u "$win_browser" 2>/dev/null || true)"
         fi
-        if [ -n "$MNT" ] && [ -x "$MNT" ] &&
-            powershell.exe -NoProfile -Command "Start-Process -FilePath '$WIN_BROWSER' -ArgumentList '$URL'" >/dev/null 2>&1; then
-            exit 0
+        if [ -n "$mnt" ] && [ -x "$mnt" ] &&
+            powershell.exe -NoProfile -Command "Start-Process -FilePath '$win_browser' -ArgumentList '$url'" >/dev/null 2>&1; then
+            return 0
         fi
     fi
-fi
-if command -v xdg-open >/dev/null 2>&1; then
-    xdg-open "$URL" >/dev/null 2>&1 || true
-elif command -v open >/dev/null 2>&1; then
-    open "$URL" >/dev/null 2>&1 || true
-fi
+    if have xdg-open; then xdg-open "$url" >/dev/null 2>&1 && return 0; fi
+    if have open; then open "$url" >/dev/null 2>&1 && return 0; fi
+    echo "abra manualmente: $url"
+    return 1
+}
+
+open_readme() {
+    local readme="$PREFIX/readme.txt"
+    [ -f "$readme" ] || readme="$PREFIX/server/README.md"
+    if have powershell.exe && have wslpath; then
+        local win
+        win="$(wslpath -w "$readme" 2>/dev/null || true)"
+        if [ -n "$win" ] && powershell.exe -NoProfile -Command "Start-Process -FilePath 'notepad.exe' -ArgumentList '$win'" >/dev/null 2>&1; then
+            return 0
+        fi
+    fi
+    if have xdg-open; then xdg-open "$readme" >/dev/null 2>&1 && return 0; fi
+    if have open; then open "$readme" >/dev/null 2>&1 && return 0; fi
+    echo "$readme"
+}
+
+case "${1:-run}" in
+run) run_foreground ;;
+start) start_server ;;
+stop) stop_server ;;
+restart)
+    stop_server
+    start_server
+    ;;
+status)
+    if is_running; then
+        echo "servidor em execução na porta $PORT"
+        if have curl; then
+            curl -fsS --max-time 2 "${URL}health" 2>/dev/null || true
+            echo
+        fi
+    else
+        echo "servidor parado"
+    fi
+    ;;
+open)
+    start_server
+    wait_healthy || echo "aviso: o servidor não respondeu em ~10s; veja $LOG" >&2
+    open_url "$URL"
+    ;;
+readme) open_readme ;;
+-h | --help | help)
+    sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    ;;
+*)
+    echo "uso: myroiddeck [run|start|stop|restart|status|open|readme]" >&2
+    exit 2
+    ;;
+esac
+MD_EOF
+run chmod +x "$BIN/mydroiddeck"
+
+write_file "$BIN/mydroiddeck-open" <<'OPEN_EOF'
+#!/usr/bin/env bash
+# Start the server if needed and open the Configuration page.
+# Kept for backwards compatibility: same as `mydroiddeck open`.
+exec "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/mydroiddeck" open
 OPEN_EOF
 run chmod +x "$BIN/mydroiddeck-open"
 
-# Deployed helper the installer uses to make the Windows shortcut (see win_shortcut).
+# Deployed helper the installer uses to make the Windows shortcuts (see win_shortcut).
 write_file "$PREFIX/tools/windows-shortcut.ps1" <<'PS1_EOF'
 <#
-    Create/remove the MyDroidDeck shortcut on the Windows Desktop and Start menu.
-    Called from the Linux/WSL installer; the shortcut runs `wsl.exe` to start the
-    server and open the Configuration page.
+    Create/remove the MyDroidDeck shortcuts on the Windows Desktop and Start menu.
+    Called from the Linux/WSL installer; each shortcut runs `wsl.exe` into the
+    distro and runs the matching bin/mydroiddeck subcommand.
 
     Usage:
-      powershell -File windows-shortcut.ps1 -Action add -Target <linux-path> [-Distro N]
+      powershell -File windows-shortcut.ps1 -Action add -Prefix <linux-prefix> [-Distro N]
       powershell -File windows-shortcut.ps1 -Action remove
+
+    NOTE: keep this file pure ASCII (Windows PowerShell 5.1 reads .ps1 files
+    without a BOM using the system ANSI codepage).
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][ValidateSet('add', 'remove')][string]$Action,
-    [string]$Target = '',
+    [string]$Prefix = '',
     [string]$Distro = ''
 )
 
 $ErrorActionPreference = 'Stop'
-$Name = 'MyDroidDeck.lnk'
-$Paths = @(
-    (Join-Path ([Environment]::GetFolderPath('Desktop')) $Name),
-    (Join-Path ([Environment]::GetFolderPath('Programs')) $Name)
+
+# Shortcut name -> bin/mydroiddeck subcommand.
+$Entries = @(
+    @{ Name = 'Configuracao do MyDroidDeck'; Sub = 'open' },
+    @{ Name = 'Iniciar servidor MyDroidDeck'; Sub = 'start' },
+    @{ Name = 'Parar servidor MyDroidDeck'; Sub = 'stop' },
+    @{ Name = 'Reiniciar servidor MyDroidDeck'; Sub = 'restart' },
+    @{ Name = 'readme.txt'; Sub = 'readme' }
 )
+$MenuDir = Join-Path ([Environment]::GetFolderPath('Programs')) 'MyDroidDeck'
+$DesktopMain = Join-Path ([Environment]::GetFolderPath('Desktop')) 'MyDroidDeck.lnk'
 
 if ($Action -eq 'remove') {
-    foreach ($p in $Paths) { Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue }
+    Remove-Item -LiteralPath $DesktopMain -Force -ErrorAction SilentlyContinue
+    if (Test-Path -LiteralPath $MenuDir) {
+        Remove-Item -LiteralPath $MenuDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
     exit 0
 }
 
-if (-not $Target) { throw 'Target is required for -Action add' }
+if (-not $Prefix) { throw 'Prefix is required for -Action add' }
+
 $Wsl = (Get-Command 'wsl.exe' -ErrorAction SilentlyContinue).Source
 if (-not $Wsl) { $Wsl = 'wsl.exe' }
 
-if ($Distro) { $Arguments = "-d $Distro -e bash -lc ""exec '$Target'""" }
-else { $Arguments = "-e bash -lc ""exec '$Target'""" }
+$Bin = "$Prefix/bin/mydroiddeck"
+function Get-WslArguments([string]$Sub) {
+    $Command = "exec '$Bin' $Sub"
+    if ($Distro) { return "-d $Distro -e bash -lc ""$Command""" }
+    return "-e bash -lc ""$Command"""
+}
 
 $Shell = New-Object -ComObject WScript.Shell
-foreach ($p in $Paths) {
-    $Link = $Shell.CreateShortcut($p)
+if (-not (Test-Path -LiteralPath $MenuDir)) { New-Item -ItemType Directory -Path $MenuDir -Force | Out-Null }
+
+foreach ($Entry in $Entries) {
+    $Path = Join-Path $MenuDir ($Entry.Name + '.lnk')
+    $Link = $Shell.CreateShortcut($Path)
     $Link.TargetPath = $Wsl
-    $Link.Arguments = $Arguments
+    $Link.Arguments = (Get-WslArguments $Entry.Sub)
     $Link.Description = 'MyDroidDeck'
     $Link.Save()
 }
+
+# A single main shortcut on the Desktop (opens the Configuration page).
+$Main = $Shell.CreateShortcut($DesktopMain)
+$Main.TargetPath = $Wsl
+$Main.Arguments = (Get-WslArguments 'open')
+$Main.Description = 'MyDroidDeck'
+$Main.Save()
 PS1_EOF
 
 # Seed the runtime config on the first install (keep an existing one).
@@ -775,6 +906,7 @@ fi
 
 log "Pronto."
 info "launcher : $BIN/mydroiddeck"
+info "controle : $BIN/mydroiddeck start|stop|restart|status"
 info "abrir    : $BIN/mydroiddeck-open"
 info "config   : http://127.0.0.1:$PORT/"
 info "dados    : $DATA"

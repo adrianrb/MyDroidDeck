@@ -65,5 +65,35 @@ else
     ok "não usa o navegador padrão do Windows"
 fi
 
+# 7. The deployed launcher exposes the server-control subcommands.
+if grep -q 'start) start_server' "$INSTALLER" &&
+    grep -q 'stop) stop_server' "$INSTALLER" &&
+    grep -q 'restart)' "$INSTALLER" &&
+    grep -q 'status)' "$INSTALLER" &&
+    grep -q 'readme) open_readme' "$INSTALLER"; then
+    ok "launcher: start/stop/restart/status/readme"
+else
+    bad "launcher: start/stop/restart/status/readme"
+fi
+
+# 8. Shortcuts for Configuração / start / stop / restart / readme.txt (Linux + Windows).
+if grep -q 'mydroiddeck-config.desktop' "$INSTALLER" &&
+    grep -q 'mydroiddeck-start.desktop' "$INSTALLER" &&
+    grep -q 'mydroiddeck-stop.desktop' "$INSTALLER" &&
+    grep -q 'mydroiddeck-restart.desktop' "$INSTALLER" &&
+    grep -q 'mydroiddeck-readme.desktop' "$INSTALLER" &&
+    grep -q 'readme\.txt' "$INSTALLER"; then
+    ok "atalhos: config/start/stop/restart/readme"
+else
+    bad "atalhos: config/start/stop/restart/readme"
+fi
+
+# 9. The readme is shipped into the install prefix.
+if grep -q 'setup/readme.txt' "$INSTALLER"; then
+    ok "readme.txt instalado"
+else
+    bad "readme.txt instalado"
+fi
+
 printf '\n%d ok, %d falhas\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
