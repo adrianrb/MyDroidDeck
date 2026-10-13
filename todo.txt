@@ -1,0 +1,8 @@
+server:
+    - na instalação, oferecer opções de conectividade (multipla escolha):
+        [x] USB
+        [x] Wifi
+        [ ] Bluetooth
+app:
+    - na primeira execução, ou a pedido em Configuração, mostrar QRCode para Wifi e Bluetooth
+    
