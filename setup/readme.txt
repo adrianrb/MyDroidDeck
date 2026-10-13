@@ -48,5 +48,6 @@ Desinstalar
 -----------
 Menu Iniciar > MyDroidDeck > Desinstalar MyDroidDeck.
 
-Os dados em data/ sao mantidos para nao perder as configuracoes; apague a pasta
-para remover tudo.
+O desinstalador para o servidor e pergunta se voce quer apagar tambem todos os
+dados (perfis, dispositivos pareados, acoes, icones e logs). Responda "Nao" para
+manter a pasta data/ com as suas configuracoes; responda "Sim" para remover tudo.

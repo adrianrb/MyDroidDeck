@@ -53,6 +53,9 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | S-36 | Professional admin UI (sidebar/cards) | Base layout restyled; pages render with the new chrome; mobile narrow layout; login is a standalone centered card | ✅ rendered by `test_admin.py` |
 | S-37 | Pick a path with the native Windows dialog (`/admin/pick-file`) | The action form offers "Browse…" next to the executable and the custom-icon fields; the endpoint returns the chosen path as JSON (`{"path": null}` when dismissed or without a Windows host) and sits behind the admin guard; the filter covers `.exe`/`.bat` and `.ico`/`.png`; the form previews the picked icon live via `/admin/icon-preview` | ✅ `test_admin.py`, `test_file_picker.py` |
 | S-38 | Rebinding an action refreshes its icon | Changing the executable (or the custom icon) drops the cached PNG so the deck/`GET /icon` re-extracts the new one; saving with no such change keeps the cache untouched | ✅ `test_admin.py` |
+| S-39 | Show the server version in the admin | The sidebar footer shows `Versão do servidor: X.Y.Z` (from `server/version.txt`) on every admin page, localized (`Server version` in en) | ✅ `test_admin.py` |
+| S-40 | Installer + shortcuts use the app's icon | `MyDroidDeck.iss` sets `SetupIconFile`/`UninstallDisplayIcon` and every Start-menu shortcut to `app.ico`, regenerated from the Android launcher vector by `setup/windows/make-icon.py` | ✅ ISCC compile (manual check on Windows) |
+| S-41 | Uninstaller offers to delete all data | The interactive uninstaller first stops the server, then asks whether to wipe the whole install folder (profiles, paired devices, actions, icons, logs); "No"/silent keeps `data\` | ✅ ISCC compile (manual check on Windows) |
 
 ## Android app (unit / instrumentation)
 | ID | Case | Expected | Status |
@@ -65,7 +68,7 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | A-06 | Switch app locale pt-BR ⇄ en | All visible strings update; no hardcoded text |
 | A-07 | Rotate / resize | Grid reflows without losing selection | ✅ device check |
 | A-08 | Profile imported with accented labels | Labels render correctly (UTF-8) |
-| A-09 | App reports its version | Matches `X.Y.Z` from the build |
+| A-09 | App reports its version | Matches `X.Y.Z` from the build (`BuildConfig.VERSION_NAME`, shown in Configuração > Sobre) | ✅ device check |
 | A-10 | Dispatch outcome mapping | `ok`/`unknown`/`failed`/`timeout` → Enviado / não configurada / Falha | ✅ `DeckStateTest.kt` |
 | A-11 | Dark mode choice | system/light/dark resolution + persisted name (unknown → system); the whole window background + system-bar icons follow the choice (Compose `Surface`, not the framework theme) | ✅ `ThemeModeTest.kt` + device check |
 | A-12 | Button icons | Deck draws the icon from `/icon` (real app icon, `FilterQuality.High`) — the snapshot read happens in the button's own scope, so a late-arriving icon repaints it; actions without an icon fall back to a label monogram badge; each action is fetched once | ✅ `DeckIconCacheTest.kt` + device check |
@@ -73,6 +76,7 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | A-13 | Server URL normalization | Trim, assume `http://` without a scheme, single trailing slash; blanks/spaces rejected | ✅ `ServerUrlTest.kt` |
 | A-14 | Change server after pairing | Server dialog (from the deck header or the error state) persists the URL, rebuilds the client and reloads; a different server 401s → re-pair | ✅ device check |
 | A-16 | Reorder buttons in the deck | "Organizar" mode rings a picked button; tapping a second button swaps them and PUTs the full profile back (`/profiles/{id}`), re-indexing 0..n-1; out-of-range/identical swaps are no-ops; failures revert the optimistic order | ✅ `DeckStateTest.kt`, `DtosTest.kt` |
+| A-17 | Configuração > Sobre (app + server versions) | The header "Configuração" menu groups the theme choices, the server address and **Sobre**; the dialog shows `BuildConfig.VERSION_NAME` and, fetched live via `GET /version`, the server version (unavailable → a clear message); the server URL is shown too | ✅ `DtosTest.kt` + device check |
 
 ## End-to-end
 | ID | Case | Expected |

@@ -44,7 +44,9 @@ at `C:\Desenv\Util\Inno Setup 7\ISCC.exe`:
 ```
 
 The result is `setup\build\output\MyDroidDeck-<version>-setup.exe` (version comes
-from `server/version.txt`).
+from `server/version.txt`). The installer, its uninstaller and every Start-menu
+shortcut use `app.ico`, which mirrors the Android launcher icon; regenerate it
+from the app's vector with `python3 setup/windows/make-icon.py` if the icon changes.
 
 ### 3. Install
 
@@ -87,8 +89,11 @@ powershell -ExecutionPolicy Bypass -File "%USERPROFILE%\MyDroidDeck\tools\firewa
 
 ### Uninstall
 
-Use *Apps & features* (or the Start-menu shortcut). Uninstall removes the Startup
-entry and the Start-menu shortcuts; your `data\` folder is kept.
+Use *Apps & features* (or the Start-menu shortcut). The uninstaller first stops
+the server (and removes the Startup entry and the Start-menu shortcuts), then
+**asks whether to delete all data**. Choose *Yes* to wipe the whole install folder
+(profiles, paired devices, actions, icons and logs under `data\`/`logs\`); choose
+*No* (or run it silently) to keep your `data\` folder.
 
 ## The Configuração page (`/admin/config`)
 

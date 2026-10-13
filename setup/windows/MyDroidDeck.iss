@@ -22,6 +22,9 @@
 #define DefaultPort "56997"
 #define StageDir AddBackslash(SourcePath) + "..\build\stage"
 #define Version Trim(FileRead(FileOpen(AddBackslash(SourcePath) + "..\..\server\version.txt")))
+; Installer/shortcut icon, matching the app's launcher icon. Regenerate it from
+; the Android vector with: python3 setup/windows/make-icon.py
+#define AppIcon AddBackslash(SourcePath) + "app.ico"
 
 [Setup]
 AppId={{9C1B7E5A-3F2D-4A6B-8E71-2D5C0A4F1B93}
@@ -41,10 +44,17 @@ Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayName={#AppName}
+; Same icon as the app (and the shortcuts below).
+SetupIconFile={#AppIcon}
+UninstallDisplayIcon={app}\app.ico
 
 [Languages]
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
+
+[CustomMessages]
+brazilianportuguese.UninstallDataPrompt=Deseja apagar também todos os dados do MyDroidDeck?%n%nIsso remove perfis, dispositivos pareados, ações, ícones e logs (a pasta %1).%n%nEscolha "Não" para manter os dados.
+english.UninstallDataPrompt=Also delete all MyDroidDeck data?%n%nThis removes profiles, paired devices, actions, icons and logs (the %1 folder).%n%nChoose "No" to keep the data.
 
 [Tasks]
 Name: "startup"; Description: "Iniciar o servidor no logon do Windows"; GroupDescription: "Inicializacao:"; Flags: checkedonce
@@ -57,6 +67,8 @@ Source: "{#SourcePath}\stop.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourcePath}\restart.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourcePath}\status.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourcePath}\..\readme.txt"; DestDir: "{app}"; Flags: ignoreversion
+; Installer/shortcut icon (also referenced by UninstallDisplayIcon).
+Source: "{#AppIcon}"; DestDir: "{app}"; Flags: ignoreversion
 
 [Dirs]
 Name: "{app}\data"
@@ -65,12 +77,12 @@ Name: "{app}\logs"
 [Icons]
 ; The "Configuracao" shortcut starts the server and opens the admin page in the
 ; owner's browser (Firefox). The server-control shortcuts are silent.
-Name: "{group}\Configuracao do MyDroidDeck"; Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\tools\open-console.ps1"""; Comment: "Iniciar o servidor e abrir a Configuracao (Firefox)"
-Name: "{group}\Iniciar servidor MyDroidDeck"; Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action start"; Comment: "Ligar o servidor"
-Name: "{group}\Parar servidor MyDroidDeck"; Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action stop"; Comment: "Desligar o servidor"
-Name: "{group}\Reiniciar servidor MyDroidDeck"; Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action restart"; Comment: "Reiniciar o servidor"
-Name: "{group}\readme.txt"; Filename: "{app}\readme.txt"; Comment: "Como usar o MyDroidDeck"
-Name: "{group}\Desinstalar MyDroidDeck"; Filename: "{uninstallexe}"
+Name: "{group}\Configuracao do MyDroidDeck"; Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\tools\open-console.ps1"""; IconFilename: "{app}\app.ico"; Comment: "Iniciar o servidor e abrir a Configuracao (Firefox)"
+Name: "{group}\Iniciar servidor MyDroidDeck"; Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action start"; IconFilename: "{app}\app.ico"; Comment: "Ligar o servidor"
+Name: "{group}\Parar servidor MyDroidDeck"; Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action stop"; IconFilename: "{app}\app.ico"; Comment: "Desligar o servidor"
+Name: "{group}\Reiniciar servidor MyDroidDeck"; Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action restart"; IconFilename: "{app}\app.ico"; Comment: "Reiniciar o servidor"
+Name: "{group}\readme.txt"; Filename: "{app}\readme.txt"; IconFilename: "{app}\app.ico"; Comment: "Como usar o MyDroidDeck"
+Name: "{group}\Desinstalar MyDroidDeck"; Filename: "{uninstallexe}"; IconFilename: "{app}\app.ico"
 
 [Run]
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action enable-logon"; Tasks: startup; Flags: runhidden
@@ -78,6 +90,8 @@ Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Fil
 
 [UninstallRun]
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action disable-logon"; Flags: runhidden; RunOnceId: "RemoveStartupEntry"
+; Stop the server before any file/data is removed (it may hold the SQLite DB).
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action stop"; Flags: runhidden; RunOnceId: "StopServer"
 
 [Code]
 { Write the initial runtime.json with the installer's choices, unless the user
@@ -110,4 +124,31 @@ procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
     WriteRuntimeConfig();
+end;
+
+{ Set in InitializeUninstall when the user asks to wipe everything. }
+var
+  DeleteAllData: Boolean;
+
+{ Before the uninstall starts, offer to remove the whole install folder
+  (profiles, paired devices, actions, icons and logs). Silent uninstalls keep
+  the data. }
+function InitializeUninstall(): Boolean;
+begin
+  Result := True;
+  DeleteAllData := False;
+  if UninstallSilent then
+    exit;
+  if MsgBox(
+       FmtMessage(CustomMessage('UninstallDataPrompt'), [ExpandConstant('{app}')]),
+       mbConfirmation, MB_YESNO) = IDYES then
+    DeleteAllData := True;
+end;
+
+{ After the uninstaller removed its own files, wipe whatever is left (data\,
+  logs\, runtime\) when the user asked for it. }
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if (CurUninstallStep = usPostUninstall) and DeleteAllData then
+    DelTree(ExpandConstant('{app}'), True, True, True);
 end;

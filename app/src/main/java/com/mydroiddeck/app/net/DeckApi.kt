@@ -5,6 +5,7 @@ import com.mydroiddeck.app.model.ActionResult
 import com.mydroiddeck.app.model.DeckProfile
 import com.mydroiddeck.app.model.PairRequest
 import com.mydroiddeck.app.model.PairResponse
+import com.mydroiddeck.app.model.VersionResponse
 import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -35,4 +36,8 @@ interface DeckApi {
      */
     @GET("icon")
     suspend fun icon(@Query("action") action: String): ResponseBody
+
+    /** The server's SemVer (`GET /version`), surfaced in "Configuração > Sobre". */
+    @GET("version")
+    suspend fun version(): VersionResponse
 }

@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.background import BackgroundTask
 
+from app import __version__
 from app.core.action_examples import load_examples
 from app.core.admin_auth import (
     COOKIE_NAME,
@@ -58,6 +59,7 @@ def _base_context(request: Request) -> dict:
         "t": lambda key: translate(key, locale),
         "locale": locale,
         "auth_enabled": settings.admin_auth_enabled,
+        "version": __version__,
     }
 
 

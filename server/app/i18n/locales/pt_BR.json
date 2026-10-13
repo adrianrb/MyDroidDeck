@@ -74,5 +74,6 @@
   "admin.pick_exe_filter": "Executáveis (*.exe;*.bat)|*.exe;*.bat|Todos os arquivos (*.*)|*.*",
   "admin.pick_icon_title": "Selecione o ícone",
   "admin.pick_icon_filter": "Ícones (*.ico;*.png;*.exe;*.dll)|*.ico;*.png;*.exe;*.dll|Todos os arquivos (*.*)|*.*",
-  "admin.buttons_editor_hint": "Botões na ordem do deck. Arraste para reorganizar antes de salvar."
+  "admin.buttons_editor_hint": "Botões na ordem do deck. Arraste para reorganizar antes de salvar.",
+  "admin.version_label": "Versão do servidor"
 }

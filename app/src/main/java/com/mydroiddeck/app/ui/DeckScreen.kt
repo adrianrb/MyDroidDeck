@@ -25,10 +25,12 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -61,6 +63,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.mydroiddeck.app.BuildConfig
 import com.mydroiddeck.app.R
 import com.mydroiddeck.app.model.ActionRequest
 import com.mydroiddeck.app.model.DeckButton
@@ -91,6 +94,7 @@ fun DeckScreen(
     var lastLabel by remember { mutableStateOf<String?>(null) }
     var reloads by remember { mutableStateOf(0) }
     var showServerDialog by remember { mutableStateOf(false) }
+    var showAbout by remember { mutableStateOf(false) }
     var arranging by remember { mutableStateOf(false) }
     var swapSel by remember { mutableStateOf<Int?>(null) }
     var arrangeNote by remember { mutableStateOf<String?>(null) }
@@ -147,6 +151,7 @@ fun DeckScreen(
                     themeMode = themeMode,
                     onThemeModeChange = onThemeModeChange,
                     onEditServer = { showServerDialog = true },
+                    onShowAbout = { showAbout = true },
                     arranging = arranging,
                     onToggleArrange = {
                         arranging = !arranging
@@ -265,6 +270,13 @@ fun DeckScreen(
             },
         )
     }
+
+    if (showAbout) {
+        AboutDialog(
+            appVersion = BuildConfig.VERSION_NAME,
+            onDismiss = { showAbout = false },
+        )
+    }
 }
 
 @Composable
@@ -304,8 +316,8 @@ private fun ArrangeBar(note: String, onDone: () -> Unit) {
     }
 }
 
-/** Profile name (with arrows when there are several) plus the theme/server/menu
- *  and the arrange (reorder) toggle. */
+/** Profile name (with arrows when there are several) plus the arrange toggle and
+ *  the "Configuração" menu (theme, server, about). */
 @Composable
 private fun DeckHeader(
     name: String,
@@ -315,6 +327,7 @@ private fun DeckHeader(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
     onEditServer: () -> Unit,
+    onShowAbout: () -> Unit,
     arranging: Boolean,
     onToggleArrange: () -> Unit,
 ) {
@@ -336,11 +349,11 @@ private fun DeckHeader(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ArrangeMenuButton(arranging = arranging, onClick = onToggleArrange)
-            ServerMenuButton(onClick = onEditServer)
-            ThemeMenu(
-                mode = themeMode,
-                onModeChange = onThemeModeChange,
-                modifier = Modifier,
+            SettingsMenu(
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
+                onEditServer = onEditServer,
+                onShowAbout = onShowAbout,
             )
         }
     }
@@ -366,50 +379,105 @@ private fun ArrangeMenuButton(arranging: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** Opens the server-address dialog so the URL can change after pairing. */
+/** "Configuração" menu: theme choices, the server address and the About dialog. */
 @Composable
-private fun ServerMenuButton(onClick: () -> Unit) {
-    val description = stringResource(R.string.deck_server_button)
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier.semantics { contentDescription = description },
-    ) {
-        Text(text = "\u2699", style = MaterialTheme.typography.titleMedium)
-    }
-}
-
-/** Light/dark switch: lets the deck follow the system or force a scheme. */
-@Composable
-private fun ThemeMenu(
-    mode: ThemeMode,
-    onModeChange: (ThemeMode) -> Unit,
-    modifier: Modifier = Modifier,
+private fun SettingsMenu(
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
+    onEditServer: () -> Unit,
+    onShowAbout: () -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
-    val description = stringResource(R.string.theme_button)
+    val description = stringResource(R.string.settings_button)
 
-    Box(modifier = modifier) {
+    Box {
         IconButton(
             onClick = { open = true },
             modifier = Modifier.semantics { contentDescription = description },
         ) {
-            Text(text = "\u25D0", style = MaterialTheme.typography.titleMedium)
+            Text(text = "\u2699", style = MaterialTheme.typography.titleMedium)
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            // Heading for the theme choices below (not clickable).
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.theme_button)) },
+                onClick = {},
+                enabled = false,
+            )
             ThemeMode.entries.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(stringResource(option.label())) },
                     leadingIcon = {
-                        Text(if (option == mode) "\u2713" else " ", textAlign = TextAlign.Center)
+                        Text(if (option == themeMode) "\u2713" else " ", textAlign = TextAlign.Center)
                     },
                     onClick = {
-                        onModeChange(option)
+                        onThemeModeChange(option)
                         open = false
                     },
                 )
             }
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.deck_server_button)) },
+                onClick = {
+                    open = false
+                    onEditServer()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.settings_about)) },
+                onClick = {
+                    open = false
+                    onShowAbout()
+                },
+            )
         }
     }
+}
+
+/** Shows the app version and, fetched live, the server version (`GET /version`). */
+@Composable
+private fun AboutDialog(appVersion: String, onDismiss: () -> Unit) {
+    var serverVersion by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        serverVersion = try {
+            ApiClient.api().version().version
+        } catch (_: Exception) {
+            null
+        }
+        loading = false
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.about_title)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.about_app_version, appVersion))
+                val version = serverVersion
+                Text(
+                    when {
+                        loading -> stringResource(R.string.about_loading)
+                        version.isNullOrBlank() ->
+                            stringResource(R.string.about_server_version_unknown)
+                        else -> stringResource(R.string.about_server_version, version)
+                    },
+                )
+                Spacer(Modifier.height(8.dp))
+                // Which server this deck is talking to.
+                Text(
+                    text = TokenStore.baseUrl,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.about_close)) }
+        },
+    )
 }
 
 private fun ThemeMode.label(): Int = when (this) {

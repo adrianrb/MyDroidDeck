@@ -46,6 +46,8 @@ android {
 
     buildFeatures {
         compose true
+        // VersionName is shown in the app's "Configuração > Sobre" dialog.
+        buildConfig true
     }
 
     composeOptions {

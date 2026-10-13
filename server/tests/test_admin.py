@@ -1,5 +1,6 @@
 import base64
 
+from app import __version__
 from app.core.config import settings
 
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
@@ -94,6 +95,15 @@ def test_admin_ui_is_localized(admin_client):
     assert "Administração" in admin_client.get("/admin/profiles").text
     english = admin_client.get("/admin/profiles", headers={"Accept-Language": "en"})
     assert "Admin" in english.text
+
+
+def test_admin_shows_the_server_version(admin_client):
+    # The version (server/version.txt) is shown in the sidebar on every page.
+    assert f"Versão do servidor: {__version__}" in admin_client.get("/admin/config").text
+    english = admin_client.get(
+        "/admin/devices", headers={"Accept-Language": "en"}
+    )
+    assert f"Server version: {__version__}" in english.text
 
 
 def test_admin_lists_and_revokes_devices(admin_client):

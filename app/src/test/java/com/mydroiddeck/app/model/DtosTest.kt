@@ -38,6 +38,13 @@ class DtosTest {
     }
 
     @Test
+    fun versionResponse_mapsServerVersion() {
+        // `GET /version` powers the "Configuração > Sobre" dialog.
+        val parsed = gson.fromJson("""{"version":"0.5.0"}""", VersionResponse::class.java)
+        assertEquals("0.5.0", parsed.version)
+    }
+
+    @Test
     fun deckProfile_mapsServerIdAndSerializesThePutBody() {
         // The server includes an id on the profile (and on each button, ignored here).
         val parsed = gson.fromJson(

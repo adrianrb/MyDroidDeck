@@ -35,4 +35,12 @@
     <string name="pairing_device_name">Nome deste dispositivo</string>
     <string name="pairing_action">Parear</string>
     <string name="pairing_error">Falha ao parear. Verifique o código e se o servidor está acessível.</string>
+    <string name="settings_button">Configuração</string>
+    <string name="settings_about">Sobre</string>
+    <string name="about_title">Sobre o MyDroidDeck</string>
+    <string name="about_app_version">Versão do app: %1$s</string>
+    <string name="about_server_version">Versão do servidor: %1$s</string>
+    <string name="about_server_version_unknown">Versão do servidor: indisponível</string>
+    <string name="about_loading">Consultando o servidor…</string>
+    <string name="about_close">Fechar</string>
 </resources>
