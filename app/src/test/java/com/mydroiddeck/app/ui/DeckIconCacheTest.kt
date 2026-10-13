@@ -48,4 +48,24 @@ class DeckIconCacheTest {
         assertEquals(1, calls)
         assertNull(cache.bytes("calc"))
     }
+
+    @Test
+    fun clearingDropsIconsAndAllowsARefetch() = runBlocking {
+        var calls = 0
+        val cache = DeckIconCache {
+            calls++
+            png
+        }
+
+        cache.load("calc")
+        assertArrayEquals(png, cache.bytes("calc"))
+        assertEquals(1, calls)
+
+        cache.clear()
+
+        assertNull(cache.bytes("calc"))
+        cache.load("calc")
+        assertArrayEquals(png, cache.bytes("calc"))
+        assertEquals(2, calls)
+    }
 }

@@ -4,8 +4,11 @@ import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import com.mydroiddeck.app.net.ApiClient
@@ -33,13 +36,26 @@ class DeckIconCache(
     private val icons = mutableStateMapOf<String, ByteArray?>()
     private val requested = mutableSetOf<String>()
 
+    /**
+     * Bumped by [clear] so [prefetch]'s `LaunchedEffect` runs again for unchanged
+     * actions; reading it here makes the button that hosts the effect recompose.
+     */
+    private var generation by mutableStateOf(0)
+
     /** Raw PNG for [action], or `null` while loading / when the action has no icon. */
     fun bytes(action: String): ByteArray? = icons[action]
+
+    /** Drops every cached icon so the next composition re-fetches all of them. */
+    fun clear() {
+        icons.clear()
+        requested.clear()
+        generation++
+    }
 
     /** Kicks off the one-shot load of [action]; call it from the button's composition. */
     @Composable
     fun prefetch(action: String) {
-        LaunchedEffect(action) { load(action) }
+        LaunchedEffect(action, generation) { load(action) }
     }
 
     /** Fetches [action] once and stores the outcome (the PNG, or `null` on failure). */

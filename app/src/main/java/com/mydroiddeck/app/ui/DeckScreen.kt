@@ -106,6 +106,16 @@ fun DeckScreen(
     val arrangeSaving = stringResource(R.string.deck_order_saving)
     val arrangeSaved = stringResource(R.string.deck_order_saved)
     val arrangeFailed = stringResource(R.string.deck_order_failed)
+    // "Atualizar" (refresh): drop the cached icons/status and re-fetch everything.
+    val refresh: () -> Unit = {
+        arranging = false
+        swapSel = null
+        arrangeNote = null
+        status = null
+        lastLabel = null
+        icons.clear()
+        reloads++
+    }
 
     LaunchedEffect(reloads) {
         loading = true
@@ -152,6 +162,7 @@ fun DeckScreen(
                     onThemeModeChange = onThemeModeChange,
                     onEditServer = { showServerDialog = true },
                     onShowAbout = { showAbout = true },
+                    onRefresh = refresh,
                     arranging = arranging,
                     onToggleArrange = {
                         arranging = !arranging
@@ -317,7 +328,7 @@ private fun ArrangeBar(note: String, onDone: () -> Unit) {
 }
 
 /** Profile name (with arrows when there are several) plus the arrange toggle and
- *  the "Configuração" menu (theme, server, about). */
+ *  the "Configuração" menu (refresh, theme, server, about). */
 @Composable
 private fun DeckHeader(
     name: String,
@@ -328,6 +339,7 @@ private fun DeckHeader(
     onThemeModeChange: (ThemeMode) -> Unit,
     onEditServer: () -> Unit,
     onShowAbout: () -> Unit,
+    onRefresh: () -> Unit,
     arranging: Boolean,
     onToggleArrange: () -> Unit,
 ) {
@@ -354,6 +366,7 @@ private fun DeckHeader(
                 onThemeModeChange = onThemeModeChange,
                 onEditServer = onEditServer,
                 onShowAbout = onShowAbout,
+                onRefresh = onRefresh,
             )
         }
     }
@@ -379,13 +392,14 @@ private fun ArrangeMenuButton(arranging: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** "Configuração" menu: theme choices, the server address and the About dialog. */
+/** "Configuração" menu: refresh, theme choices, the server address and the About dialog. */
 @Composable
 private fun SettingsMenu(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
     onEditServer: () -> Unit,
     onShowAbout: () -> Unit,
+    onRefresh: () -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
     val description = stringResource(R.string.settings_button)
@@ -417,6 +431,13 @@ private fun SettingsMenu(
                 )
             }
             HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.settings_refresh)) },
+                onClick = {
+                    open = false
+                    onRefresh()
+                },
+            )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.deck_server_button)) },
                 onClick = {

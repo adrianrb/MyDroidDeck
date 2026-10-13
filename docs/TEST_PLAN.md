@@ -77,6 +77,7 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | A-14 | Change server after pairing | Server dialog (from the deck header or the error state) persists the URL, rebuilds the client and reloads; a different server 401s → re-pair | ✅ device check |
 | A-16 | Reorder buttons in the deck | "Organizar" mode rings a picked button; tapping a second button swaps them and PUTs the full profile back (`/profiles/{id}`), re-indexing 0..n-1; out-of-range/identical swaps are no-ops; failures revert the optimistic order | ✅ `DeckStateTest.kt`, `DtosTest.kt` |
 | A-17 | Configuração > Sobre (app + server versions) | The header "Configuração" menu groups the theme choices, the server address and **Sobre**; the dialog shows `BuildConfig.VERSION_NAME` and, fetched live via `GET /version`, the server version (unavailable → a clear message); the server URL is shown too | ✅ `DtosTest.kt` + device check |
+| A-18 | Configuração > Atualizar (refresh everything) | The menu's **Atualizar** item drops the icon cache and re-fetches the profiles from the server (back to the loading state), resetting arrange mode and the last status; the icon cache bumps a generation counter so every button re-fetches even when its action key did not change | ✅ `DeckIconCacheTest.kt` + device check |
 
 ## End-to-end
 | ID | Case | Expected |
