@@ -1,4 +1,7 @@
 Server:
     1. Desinstalador: oferecer para apagar todos os dados (pasta inteira)
+    2. ícone do instalador igual do app
+    3. mostrar a versão do server
 App:
+    1. mostrar em Configuração > Sobre a versão do app e a versão do server
     
