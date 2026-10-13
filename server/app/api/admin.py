@@ -9,7 +9,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
@@ -32,6 +32,7 @@ from app.core.icons import (
     prewarm_icons,
     resolve_icon,
 )
+from app.core.qr import local_lan_ip, pairing_qr_png, pairing_uri, phone_server_url
 from app.core.runtime_config import (
     RuntimeConfig,
     load_runtime_config,
@@ -441,6 +442,42 @@ def list_devices(request: Request, session: Session = Depends(get_session)):
             "devices": devices,
             "pairing_code": settings.pairing_code,
         },
+    )
+
+
+def _pairing_context(request: Request) -> dict:
+    """QR data for the "pair a new device" page: URL *and* code, as one payload.
+
+    The URL is resolved from the request but swapped to the LAN address when the
+    admin page was opened locally, so the QR works from the phone's camera.
+    """
+    server_url, local_only = phone_server_url(str(request.url), local_lan_ip())
+    return {
+        "server_url": server_url,
+        "pairing_code": settings.pairing_code,
+        "pairing_uri": pairing_uri(server_url, settings.pairing_code),
+        "local_only": local_only,
+    }
+
+
+@router.get("/devices/pair", response_class=HTMLResponse)
+def pair_new_device(request: Request):
+    """Show the QR code (server URL + pairing code) the app scans on first run."""
+    return templates.TemplateResponse(
+        request=request,
+        name="devices/pair.html",
+        context={**_base_context(request), **_pairing_context(request)},
+    )
+
+
+@router.get("/devices/pair.png")
+def pair_new_device_qr(request: Request) -> Response:
+    """PNG of the pairing QR (same payload the page shows as text)."""
+    server_url, _ = phone_server_url(str(request.url), local_lan_ip())
+    return Response(
+        content=pairing_qr_png(pairing_uri(server_url, settings.pairing_code)),
+        media_type="image/png",
+        headers={"Cache-Control": "no-store"},
     )
 
 

@@ -71,6 +71,7 @@ and keep an attribution/license note (see `AGENTS.md`). Permissive licenses
 | [Hilt/Dagger](https://github.com/google/dagger) | Apache-2.0 | Dependency injection. |
 | [Java-WebSocket](https://github.com/TooTallNate/Java-WebSocket) | MIT | WebSocket client if not using OkHttp. |
 | [LeakCanary](https://github.com/square/leakcanary) / [Timber](https://github.com/JakeWharton/timber) | Apache-2.0 | Debug/logging (dev only). |
+| [ZXing Android Embedded](https://github.com/journeyapps/zxing-android-embedded) (wraps [ZXing core](https://github.com/zxing/zxing)) | Apache-2.0 | Camera + QR scanning for first-run pairing; bundled, no Play Services. |
 
 ### Server (`server/`)
 | Library | License | Use |
@@ -82,6 +83,8 @@ and keep an attribution/license note (see `AGENTS.md`). Permissive licenses
 | [Zod](https://github.com/colinhacks/zod) | MIT | Runtime validation. |
 | [Vitest](https://github.com/vitest-dev/vitest) / [Jest](https://github.com/jestjs/jest) | MIT | Testing. |
 | [React](https://github.com/facebook/react) | MIT | Admin UI. |
+| [Segno](https://github.com/heuer/segno) | BSD-3-Clause | Pure-Python QR code renderer (pairing PNG in the admin UI; no native deps). |
+| [Pillow](https://github.com/python-pillow/Pillow) / [zxing-cpp](https://github.com/zxing-cpp/zxing-cpp) | MIT-CMU (HPND) / Apache-2.0 | **Test-only** decoders proving the pairing QR reads back. |
 
 ### Homonymous / related projects (reference only — verify each license)
 - [sDeck](https://github.com/itsiurisilva/sDeck) — MIT, self-hosted web Stream Deck.

@@ -132,6 +132,13 @@ body {
 .page-head h2 { margin: 0; }
 .page-head .page-head-note { margin: 0; }
 
+.page-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
 h1 { font-size: 1.35rem; margin: 0 0 0.2rem; }
 h2 { font-size: 1.2rem; margin: 0 0 0.9rem; }
 h3 { font-size: 1.05rem; margin: 1.4rem 0 0.5rem; }
@@ -376,8 +383,38 @@ label.check input { width: auto; margin: 0; }
 
 .icon-preview.hidden { display: none; }
 
-/* ---------- Standalone pages (login) ---------- */
-body.standalone .sidebar { display: none; }
+/* ---------- Pair a new device (QR) ---------- */
+.pair {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    max-width: 34rem;
+    text-align: center;
+}
+
+.pair-qr {
+    max-width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+    image-rendering: pixelated;
+}
+
+.pair-details {
+    display: grid;
+    grid-template-columns: auto auto;
+    align-items: baseline;
+    gap: 0.2rem 0.8rem;
+    margin: 0.4rem 0 0;
+    text-align: left;
+}
+
+.pair-details dt { color: var(--text-muted); font-size: 0.85rem; }
+.pair-details dd { margin: 0; }
+
+/* ---------- Standalone pages (login) ---------- */body.standalone .sidebar { display: none; }
 
 body.standalone .content {
     max-width: 26rem;

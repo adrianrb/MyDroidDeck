@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+    <h2>{{ t("admin.pair_new") }}</h2>
+    <a class="button ghost small" href="/admin/devices">{{ t("admin.back") }}</a>
+</div>
+
+<div class="card pair">
+    <img class="pair-qr" src="/admin/devices/pair.png"
+         alt="{{ t("admin.pair_qr_alt") }}">
+    <p class="muted small">{{ t("admin.pair_qr_hint") }}</p>
+    <dl class="pair-details">
+        <dt>{{ t("admin.pair_qr_server") }}</dt>
+        <dd><code>{{ server_url }}</code></dd>
+        <dt>{{ t("admin.pair_qr_code") }}</dt>
+        <dd><code>{{ pairing_code }}</code></dd>
+    </dl>
+    {% if local_only %}
+    <p class="error small">{{ t("admin.pair_qr_local_only") }}</p>
+    {% endif %}
+</div>
+{% endblock %}

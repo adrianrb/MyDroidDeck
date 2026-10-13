@@ -29,7 +29,10 @@
     <string name="deck_order_saved">Ordem salva.</string>
     <string name="deck_order_failed">Não foi possível salvar a ordem.</string>
     <string name="pairing_title">Parear com o servidor</string>
-    <string name="pairing_hint">Digite o código exibido na página de dispositivos do servidor e ajuste a URL se o deck estiver em outro aparelho.</string>
+    <string name="pairing_hint">Aponte a câmera para o QR code da página Dispositivos do servidor ou ajuste os dados abaixo se o deck estiver em outro aparelho.</string>
+    <string name="pairing_scan_qr">Ler QR code</string>
+    <string name="pairing_scan_prompt">Aponte a câmera para o QR code</string>
+    <string name="pairing_qr_invalid">QR code não reconhecido. Use o código exibido na página Dispositivos do servidor.</string>
     <string name="pairing_server_url">URL do servidor</string>
     <string name="pairing_code">Código</string>
     <string name="pairing_device_name">Nome deste dispositivo</string>

@@ -56,6 +56,7 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | S-39 | Show the server version in the admin | The sidebar footer shows `Versão do servidor: X.Y.Z` (from `server/version.txt`) on every admin page, localized (`Server version` in en) | ✅ `test_admin.py` |
 | S-40 | Installer + shortcuts use the app's icon | `MyDroidDeck.iss` sets `SetupIconFile`/`UninstallDisplayIcon` and every Start-menu shortcut to `app.ico`, regenerated from the Android launcher vector by `setup/windows/make-icon.py` | ✅ ISCC compile (manual check on Windows) |
 | S-41 | Uninstaller offers to delete all data | The interactive uninstaller first stops the server, then asks whether to wipe the whole install folder (profiles, paired devices, actions, icons, logs); "No"/silent keeps `data\` | ✅ ISCC compile (manual check on Windows) |
+| S-42 | Pair a new device by QR (`Dispositivos → Parear novo`) | The devices page links to `/admin/devices/pair`, which shows a QR whose payload is `mydroiddeck://pair?url=<server>&code=<code>` plus the URL and the code as text; a loopback host is swapped for the machine's LAN address (warning when it stays local); `/admin/devices/pair.png` serves that PNG, `segno`-encoded and decoded back by an independent reader; both routes need the admin session and are localized | ✅ `test_pairing_qr.py` |
 
 ## Android app (unit / instrumentation)
 | ID | Case | Expected | Status |
@@ -78,6 +79,7 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | A-16 | Reorder buttons in the deck | "Organizar" mode rings a picked button; tapping a second button swaps them and PUTs the full profile back (`/profiles/{id}`), re-indexing 0..n-1; out-of-range/identical swaps are no-ops; failures revert the optimistic order | ✅ `DeckStateTest.kt`, `DtosTest.kt` |
 | A-17 | Configuração > Sobre (app + server versions) | The header "Configuração" menu groups the theme choices, the server address and **Sobre**; the dialog shows `BuildConfig.VERSION_NAME` and, fetched live via `GET /version`, the server version (unavailable → a clear message); the server URL is shown too | ✅ `DtosTest.kt` + device check |
 | A-18 | Configuração > Atualizar (refresh everything) | The menu's **Atualizar** item drops the icon cache and re-fetches the profiles from the server (back to the loading state), resetting arrange mode and the last status; the icon cache bumps a generation counter so every button re-fetches even when its action key did not change | ✅ `DeckIconCacheTest.kt` + device check |
+| A-19 | First run scans the pairing QR | With no token the pairing screen opens the camera by itself (and a **Ler QR code** button re-opens it); a `mydroiddeck://pair?url=…&code=…` payload fills the server URL (normalized) and the code, other QR codes show a clear error and leave the fields alone; entering them by hand still works | ✅ `PairingQrTest.kt` + device check |
 
 ## End-to-end
 | ID | Case | Expected |
