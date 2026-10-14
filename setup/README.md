@@ -54,14 +54,27 @@ The installer is **per-user and does not request elevation**: it installs under
 `%USERPROFILE%\MyDroidDeck` (you can change the folder on the wizard's location
 page). It offers:
 
+- **Conectividade** (multiple choice) — how the phone reaches the server:
+  - **USB (cabo)** — default on. Adds a *Conectar por USB* shortcut and, right
+    after the install, runs `adb reverse tcp:<port> tcp:<port>` so the phone
+    talks to the server over the cable at `http://127.0.0.1:<port>/` (needs the
+    Android SDK `platform-tools`/`adb` on the PC and USB debugging on the phone;
+    everything stays on the loopback, no network involved).
+  - **Wi-Fi/rede local** — default on. Writes `visible_on_network: true` in
+    `data\runtime.json` so the server listens on the LAN. The installer is not
+    elevated, so the **firewall rule is still manual** (see *LAN access* below);
+    the finish page reminds you.
+  - **Bluetooth** — listed for reference but **disabled**: the server has no
+    Bluetooth (RFCOMM) transport yet.
 - **Iniciar no logon do Windows** — adds a hidden launcher
   (`MyDroidDeck.vbs`) to your **Startup** folder (no admin, no console window).
 
 The **Start menu → MyDroidDeck** group gets: *Configuração do MyDroidDeck*
 (starts the server and opens the page in Firefox), *Iniciar servidor*, *Parar
-servidor*, *Reiniciar servidor*, *readme.txt* and *Desinstalar*. The same
-operations are available from a console via `start.cmd`, `stop.cmd`,
-`restart.cmd` and `status.cmd` in the install folder.
+servidor*, *Reiniciar servidor*, *Conectar por USB* (only when USB was chosen),
+*readme.txt* and *Desinstalar*. The same operations are available from a console
+via `start.cmd`, `stop.cmd`, `restart.cmd` and `status.cmd` in the install
+folder.
 
 Install layout (all under your HOME):
 
@@ -69,7 +82,7 @@ Install layout (all under your HOME):
 | --- | --- |
 | `%USERPROFILE%\MyDroidDeck\server\` | server code |
 | `%USERPROFILE%\MyDroidDeck\runtime\` | embedded Python |
-| `%USERPROFILE%\MyDroidDeck\tools\` | `control.ps1`, `firewall.ps1` |
+| `%USERPROFILE%\MyDroidDeck\tools\` | `control.ps1` (start/stop/status, logon, `usb-connect`), `firewall.ps1` |
 | `%USERPROFILE%\MyDroidDeck\*.cmd` | `start` / `stop` / `restart` / `status` scripts |
 | `%USERPROFILE%\MyDroidDeck\readme.txt` | usage notes |
 | `%USERPROFILE%\MyDroidDeck\data\` | `runtime.json`, `mydroiddeck.db`, `icons\` |
@@ -78,6 +91,17 @@ Install layout (all under your HOME):
 On finishing, the wizard starts the server, waits until it answers and then
 opens `http://127.0.0.1:56997/` in the browser (the wait avoids a first-request
 404; the root redirects to the Configuração page).
+
+### Connecting the phone
+
+The Configuração page (`/admin/config` → *Conectividade*) shows the same
+information after the install:
+
+| Transport | How |
+| --- | --- |
+| **Wi-Fi / LAN** | Turn on *Visível na rede* + add the firewall rule (below), restart the server, then pair from the phone's camera using the QR on **Dispositivos → Parear novo** (the LAN address). |
+| **USB (cable)** | Enable USB debugging, plug the phone in and run *Conectar por USB* (Start menu) — or `powershell -ExecutionPolicy Bypass -File tools\control.ps1 -Action usb-connect` — then point the app at `http://127.0.0.1:56997/`. Works with no network at all; `-Action usb-disconnect` undoes the port forwarding. |
+| **Bluetooth** | Not available yet (planned: the app talks to the server directly over RFCOMM; the PC needs a Bluetooth radio). |
 
 **LAN access.** Since the installer is not elevated, it does **not** add a
 firewall rule. To expose the server to other devices, run this **once** in an
@@ -104,6 +128,7 @@ The single entry point after install:
 | **Visível na rede** | Bind `0.0.0.0` (LAN) instead of `127.0.0.1` (this PC). Also needs the firewall rule above. |
 | **Porta** | TCP port (default 56997). |
 | **Iniciar no logon** | Add/remove the Startup-folder launcher (via `tools\control.ps1`). |
+| **Conectividade** | How the phone reaches the server: the USB card shows the `adb reverse` command, the `http://127.0.0.1:<port>/` app address and a *Conectar por USB* button (runs `control.ps1 -Action usb-connect`); the Wi-Fi card points at *Visível na rede* + the firewall rule; Bluetooth is marked as not available yet. |
 | **Perfis** / **Ações** | Shortcuts to the profile and action managers. |
 | **Reiniciar servidor** | Restarts the server so network/port changes take effect. |
 
@@ -131,6 +156,7 @@ autostarts the server and adds the shortcuts:
 ```bash
 setup/linux/install-server.sh
 # --prefix DIR   --port N   --autostart auto|systemd|xdg|profile|none
+# --connectivity usb,wifi|usb|wifi|none   (default: asks, USB+Wi-Fi preselec.)
 # --no-desktop   --no-open  --no-start   --install-deps   --yes
 # --uninstall    --dry-run
 ```
@@ -145,13 +171,21 @@ What it does:
    It copies `server/` next to a fresh `venv/`, so the git clone can be removed
    afterwards.
 3. **Adds shortcuts** — `.desktop` entries (Configuração / start / stop / restart /
-   readme.txt) on your Desktop and in `~/.local/share/applications` on a Linux GUI;
-   under WSL it also creates the same set in the Windows **Start menu**
-   (`MyDroidDeck\`) plus `MyDroidDeck.lnk` on the Windows **Desktop** (launching
-   `wsl.exe`).
+   readme.txt, plus *Conectar por USB* when USB is offered) on your Desktop and in
+   `~/.local/share/applications` on a Linux GUI; under WSL it also creates the same
+   set in the Windows **Start menu** (`MyDroidDeck\`) plus `MyDroidDeck.lnk` on the
+   Windows **Desktop** (launching `wsl.exe`).
 4. **Offers autostart at logon** — `systemd --user` when available, else an XDG
    autostart entry (GUI) or a guarded block in `~/.profile` (WSL). Choose with
    `--autostart`; use `--autostart none` to skip.
+5. **Asks about connectivity** (same multiple choice as the Windows wizard, USB +
+   Wi-Fi preselected): **USB** adds the *Conectar por USB* shortcut, which runs
+   `bin/mydroiddeck usb` → `adb reverse tcp:<port> tcp:<port>` (the app then uses
+   `http://127.0.0.1:<port>/` over the cable); **Wi-Fi/rede local** seeds
+   `"visible_on_network": true` in `data/runtime.json` (the app uses the LAN address;
+   on Windows, allow the port in the firewall). Bluetooth is listed in the docs as
+   not available yet. Non-interactive runs (`--yes`, no TTY) keep USB + Wi-Fi; pass
+   `--connectivity` to script it.
 
 Layout (default `~/MyDroidDeck`):
 
@@ -159,7 +193,7 @@ Layout (default `~/MyDroidDeck`):
 | --- | --- |
 | `server/` | server code (copied) |
 | `venv/` | Python virtualenv |
-| `bin/mydroiddeck` | server control: `start` / `stop` / `restart` / `status` / `open` / `readme` (no argument = foreground, used by systemd) |
+| `bin/mydroiddeck` | server control: `start` / `stop` / `restart` / `status` / `open` / `readme` / `usb` / `usb-off` (no argument = foreground, used by systemd) |
 | `bin/mydroiddeck-open` | alias of `mydroiddeck open` (start-if-needed + open the page) |
 | `tools/windows-shortcut.ps1` | Windows Desktop/Start-menu shortcuts (WSL only) |
 | `readme.txt` | usage notes |

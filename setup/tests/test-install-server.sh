@@ -95,5 +95,54 @@ else
     bad "readme.txt instalado"
 fi
 
+# 10. --connectivity is documented and validated.
+if out="$("$INSTALLER" --help 2>&1)" && grep -q -- "--connectivity" <<<"$out"; then
+    ok "help: --connectivity"
+else
+    bad "help: --connectivity"
+fi
+if "$INSTALLER" --dry-run --connectivity bluetooth --prefix "$TMP/c" \
+    --autostart none --yes >/dev/null 2>&1; then
+    bad "conectividade inválida rejeitada"
+else
+    ok "conectividade inválida rejeitada"
+fi
+for spec in usb wifi usb,wifi none; do
+    if "$INSTALLER" --dry-run --connectivity "$spec" --prefix "$TMP/c" \
+        --no-open --no-start --no-desktop --autostart none --yes >/dev/null 2>&1; then
+        ok "conectividade aceita: $spec"
+    else
+        bad "conectividade aceita: $spec"
+    fi
+done
+
+# 11. Wi-Fi connectivity makes the server visible on the network.
+if grep -q 'connect_has wifi' "$INSTALLER" &&
+    grep -q '"visible_on_network": \$VISIBLE_ON_NETWORK' "$INSTALLER"; then
+    ok "wifi -> visible_on_network"
+else
+    bad "wifi -> visible_on_network"
+fi
+
+# 12. The launcher forwards the port over USB (adb reverse).
+if grep -q 'usb) connect_usb ;;' "$INSTALLER" &&
+    grep -q 'usb-off) disconnect_usb ;;' "$INSTALLER" &&
+    grep -q 'reverse "tcp:\$PORT" "tcp:\$PORT"' "$INSTALLER" &&
+    grep -q -- '--remove "tcp:\$PORT"' "$INSTALLER"; then
+    ok "launcher: usb / usb-off"
+else
+    bad "launcher: usb / usb-off"
+fi
+
+# 13. "Conectar por USB" shortcut (Linux desktop entry + Windows Start menu).
+if grep -q 'mydroiddeck-usb.desktop' "$INSTALLER" &&
+    grep -q 'Conectar por USB' "$INSTALLER" &&
+    grep -q '\-ConnectUsb' "$INSTALLER"; then
+    ok "atalho: Conectar por USB"
+else
+    bad "atalho: Conectar por USB"
+fi
+
+
 printf '\n%d ok, %d falhas\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

@@ -1,7 +1,10 @@
 server:
-    - na instalação, oferecer opções de conectividade (multipla escolha):
-        [x] USB
-        [x] Wifi
-        [ ] Bluetooth
+    - na instalação, oferecer opções de conectividade (multipla escolha) - feito 0.5.2:
+        [x] USB - atalho "Conectar por USB" + adb reverse tcp:<porta> tcp:<porta>
+        [x] Wifi - visible_on_network + lembrete do firewall do Windows
+        [ ] Bluetooth - transporte RFCOMM app<->servidor (PC sem radio Bluetooth;
+            adiado; os instaladores listam a opcao como indisponivel)
+    - instaladores Windows (Inno) e Linux/WSL (--connectivity) oferecem USB/Wi-Fi
 app:
-    - na primeira execução, ou a pedido em Configuração, mostrar QRCode para Wifi e Bluetooth
+    - (removido) "mostrar QRCode para Wifi e Bluetooth": nao se aplica ao app -
+        o servidor e quem mostra o QR de pareamento (Dispositivos > Parear novo)

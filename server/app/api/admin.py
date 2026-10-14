@@ -212,6 +212,7 @@ def config_page(request: Request):
             "error": None,
             "saved": request.query_params.get("saved"),
             "restarted": request.query_params.get("restarted"),
+            "usb": request.query_params.get("usb"),
         },
     )
 
@@ -255,6 +256,19 @@ def restart_server() -> RedirectResponse:
     """Ask the host helper to restart the server (no-op on dev machines)."""
     _apply_control("restart")
     return RedirectResponse(url="/admin/config?restarted=1", status_code=303)
+
+
+@router.post("/config/usb")
+def connect_usb() -> RedirectResponse:
+    """Ask the host helper to wire the USB cable to the server (``adb reverse``).
+
+    The helper forwards the configured port from the phone to this PC
+    (``adb reverse tcp:<port> tcp:<port>``), so the deck reaches the server at
+    ``http://127.0.0.1:<port>/`` without using the network. On dev machines
+    (no helper) the button is harmless: it only records nothing and redirects.
+    """
+    _apply_control("usb-connect")
+    return RedirectResponse(url="/admin/config?usb=1", status_code=303)
 
 
 @router.get("/profiles", response_class=HTMLResponse)

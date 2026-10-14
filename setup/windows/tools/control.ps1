@@ -9,6 +9,8 @@
       status         report whether the server is running and its version
       enable-logon   add a hidden launcher to the user's Startup folder
       disable-logon  remove it
+      usb-connect    forward the server port over the USB cable (adb reverse)
+      usb-disconnect undo the USB port forwarding
 
     Everything is per-user: no administrator rights, no console window.
 
@@ -18,7 +20,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('start', 'stop', 'restart', 'status', 'enable-logon', 'disable-logon')]
+    [ValidateSet('start', 'stop', 'restart', 'status', 'enable-logon', 'disable-logon',
+        'usb-connect', 'usb-disconnect')]
     [string]$Action
 )
 
@@ -104,11 +107,57 @@ function Remove-LogonEntry {
     if (Test-Path -LiteralPath $Entry) { Remove-Item -LiteralPath $Entry -Force }
 }
 
+function Resolve-Adb {
+    # adb ships with the Android SDK platform-tools; check the usual locations
+    # (the SDK paths are not on PATH on most Windows machines).
+    $Candidates = @()
+    foreach ($Var in 'ANDROID_HOME', 'ANDROID_SDK_ROOT') {
+        $Value = [Environment]::GetEnvironmentVariable($Var)
+        if ($Value) { $Candidates += (Join-Path $Value 'platform-tools\adb.exe') }
+    }
+    if ($env:LOCALAPPDATA) {
+        $Candidates += (Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe')
+    }
+    $Candidates += 'C:\Desenv\Android\Sdk\platform-tools\adb.exe'
+    foreach ($Candidate in $Candidates) {
+        if (Test-Path -LiteralPath $Candidate) { return $Candidate }
+    }
+    $OnPath = Get-Command 'adb.exe' -ErrorAction SilentlyContinue
+    if ($OnPath) { return $OnPath.Source }
+    return $null
+}
+
+# USB cable: forward the server port from the phone to this PC, so the app talks
+# to the server over the cable (http://127.0.0.1:<port>/) without any network.
+function Connect-UsbReverse {
+    $Adb = Resolve-Adb
+    if (-not $Adb) {
+        Write-Host 'adb nao encontrado. Instale o Android SDK platform-tools e tente de novo.'
+        return
+    }
+    if (-not (Get-ServerProcess)) { Start-MyServer }
+    $Result = & $Adb reverse "tcp:$Port" "tcp:$Port" 2>&1
+    Write-Host "adb reverse tcp:$Port tcp:$Port -> $Result"
+    Write-Host "No app, use o endereco: http://127.0.0.1:$Port/"
+}
+
+function Disconnect-UsbReverse {
+    $Adb = Resolve-Adb
+    if (-not $Adb) {
+        Write-Host 'adb nao encontrado.'
+        return
+    }
+    $Result = & $Adb reverse --remove "tcp:$Port" 2>&1
+    Write-Host "adb reverse --remove tcp:$Port -> $Result"
+}
+
 switch ($Action) {
     'start' { Start-MyServer }
     'stop' { Stop-MyServer }
     'restart' { Stop-MyServer; Start-Sleep -Milliseconds 500; Start-MyServer }
     'status' { Show-Status }
+    'usb-connect' { Connect-UsbReverse }
+    'usb-disconnect' { Disconnect-UsbReverse }
     'enable-logon' {
         Set-LogonEntry
         Write-Host "Inicializacao no logon habilitada: $Entry"

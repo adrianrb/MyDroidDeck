@@ -10,6 +10,8 @@
 # Usage: setup/linux/install-server.sh [options]
 #   --prefix DIR        install location (default: $HOME/MyDroidDeck)
 #   --port N            TCP port (default: 56997)
+#   --connectivity LIST how the phone reaches the server: usb,wifi (default),
+#                       usb, wifi or none. Without it, asks when interactive.
 #   --autostart MODE    auto|systemd|xdg|profile|none (default: auto)
 #   --no-desktop        skip the desktop / Start-menu shortcuts
 #   --no-open           do not open the browser
@@ -29,6 +31,11 @@ DEFAULT_PREFIX="$HOME/MyDroidDeck"
 
 PREFIX=""
 PORT="$DEFAULT_PORT"
+# Connectivity (like the Windows wizard): USB (adb reverse over the cable) and
+# Wi-Fi/LAN (server visible on the network). Bluetooth has no transport yet.
+# Default mirrors the wizard's pre-checked boxes (USB + Wi-Fi).
+CONNECT="usb,wifi"
+CONNECT_SPECIFIED=0
 AUTOSTART="auto"
 DESKTOP=1
 OPEN_BROWSER=1
@@ -135,6 +142,17 @@ while [ $# -gt 0 ]; do
         shift 2
         ;;
     --port=*) PORT="${1#*=}"; shift ;;
+    --connectivity)
+        [ $# -ge 2 ] || die "--connectivity exige um valor"
+        CONNECT="$2"
+        CONNECT_SPECIFIED=1
+        shift 2
+        ;;
+    --connectivity=*)
+        CONNECT="${1#*=}"
+        CONNECT_SPECIFIED=1
+        shift
+        ;;
     --autostart)
         [ $# -ge 2 ] || die "--autostart exige um valor"
         AUTOSTART="$2"
@@ -149,7 +167,7 @@ while [ $# -gt 0 ]; do
     --uninstall) UNINSTALL=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h | --help)
-        sed -n '2,23p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+        sed -n '2,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
         exit 0
         ;;
     *) die "opção desconhecida: $1" ;;
@@ -160,6 +178,56 @@ case "$AUTOSTART" in
 auto | systemd | xdg | profile | none) ;;
 *) die "modo de autostart inválido: $AUTOSTART (use auto|systemd|xdg|profile|none)" ;;
 esac
+
+# Connectivity: "usb", "wifi", both (any order) or "none". Membership is a plain
+# comma-list so bin/mydroiddeck can ask the question the same way.
+connect_has() { # usb|wifi
+    case ",$CONNECT," in *",$1,"*) return 0 ;; esac
+    return 1
+}
+
+resolve_connectivity() { # SPEC
+    local spec="$1" out="" item
+    local IFS=,
+    for item in $spec; do
+        case "$item" in
+        usb | wifi | none | '') ;;
+        *) die "conectividade inválida: $item (use usb,wifi|usb|wifi|none)" ;;
+        esac
+    done
+    case ",$spec," in *,usb,*) out="usb" ;; esac
+    case ",$spec," in *,wifi,*) out="${out:+$out,}wifi" ;; esac
+    CONNECT="$out"
+}
+
+# Offer the choices like the Windows wizard (USB and Wi-Fi pre-selected). Only
+# when --connectivity was not given, an interactive shell is attached and the
+# user did not ask for --yes.
+choose_connectivity() {
+    if [ "$CONNECT_SPECIFIED" = 1 ]; then
+        resolve_connectivity "$CONNECT"
+    elif [ "$ASSUME_YES" = 0 ] && [ -t 0 ]; then
+        local want_usb=1 want_wifi=1
+        printf 'Como o celular vai falar com este servidor?\n'
+        prompt_yes_no "  USB (cabo, adb reverse)" y || want_usb=0
+        prompt_yes_no "  Wi-Fi (visível na rede local)" y || want_wifi=0
+        CONNECT=""
+        [ "$want_usb" = 1 ] && CONNECT="usb"
+        [ "$want_wifi" = 1 ] && CONNECT="${CONNECT:+$CONNECT,}wifi"
+    fi
+    return 0
+}
+
+connect_description() {
+    if [ -z "$CONNECT" ]; then
+        echo "nenhuma (somente este PC, 127.0.0.1)"
+        return
+    fi
+    local out=""
+    connect_has usb && out="USB"
+    connect_has wifi && out="${out:+$out + }Wi-Fi"
+    echo "$out"
+}
 
 case "$PORT" in
 '' | *[!0-9]*) die "porta inválida: $PORT" ;;
@@ -452,7 +520,7 @@ disable_autostart() {
     [ "$DRY_RUN" = 1 ] || rm -f "$XDG_AUTOSTART"
     local d s
     for d in "$APPS_DIR" "$(desktop_dir)"; do
-        for s in config start stop restart readme; do
+        for s in config start stop restart readme usb; do
             [ "$DRY_RUN" = 1 ] || rm -f "$d/mydroiddeck-$s.desktop"
         done
         [ "$DRY_RUN" = 1 ] || rm -f "$d/$APP_NAME.desktop"
@@ -496,16 +564,24 @@ win_shortcut() { # add|remove
     local action="$1"
     local helper="$PREFIX/tools/windows-shortcut.ps1"
     local helper_win="$helper"
+    local connect_arg=""
+    local -a args=()
     if have wslpath; then
         helper_win="$(wslpath -w "$helper" 2>/dev/null || echo "$helper")"
     fi
+    args=(-Action "$action" -Prefix "$PREFIX" -Distro "${WSL_DISTRO_NAME:-}")
+    if connect_has usb; then
+        args+=(-ConnectUsb)
+        connect_arg=" -ConnectUsb"
+    fi
     if [ "$DRY_RUN" = 1 ]; then
-        printf '[dry-run] powershell.exe -File %s -Action %s -Prefix %s\n' "$helper_win" "$action" "$PREFIX"
+        printf '[dry-run] powershell.exe -File %s -Action %s -Prefix %s%s\n' \
+            "$helper_win" "$action" "$PREFIX" "$connect_arg"
         return 0
     fi
     [ -f "$helper" ] || return 1
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$helper_win" \
-        -Action "$action" -Prefix "$PREFIX" -Distro "${WSL_DISTRO_NAME:-}" >/dev/null 2>&1
+        "${args[@]}" >/dev/null 2>&1
 }
 
 make_shortcuts() {
@@ -521,6 +597,10 @@ make_shortcuts() {
     # Desktop icon (only when a GUI is actually visible).
     if [ "$with_gui" = 1 ]; then
         desktop_entry "$(desktop_dir)/mydroiddeck-config.desktop" "Configuração" open
+        # USB helper, only when USB connectivity was chosen.
+        if connect_has usb; then
+            desktop_entry "$(desktop_dir)/mydroiddeck-usb.desktop" "Conectar por USB" usb
+        fi
     fi
 
     # Application-menu entries: Configuração / start / stop / restart / readme.
@@ -530,6 +610,9 @@ make_shortcuts() {
         desktop_entry "$APPS_DIR/mydroiddeck-stop.desktop" "Parar servidor" stop
         desktop_entry "$APPS_DIR/mydroiddeck-restart.desktop" "Reiniciar servidor" restart
         desktop_entry "$APPS_DIR/mydroiddeck-readme.desktop" "readme.txt" readme
+        if connect_has usb; then
+            desktop_entry "$APPS_DIR/mydroiddeck-usb.desktop" "Conectar por USB" usb
+        fi
     fi
 
     if [ "$with_win" = 1 ]; then
@@ -622,6 +705,9 @@ if [ "$UNINSTALL" = 1 ]; then
     exit 0
 fi
 
+choose_connectivity
+info "conectividade: $(connect_description)"
+
 ensure_prerequisites
 
 log "Instalando em $PREFIX"
@@ -648,7 +734,7 @@ fi
 
 write_file "$BIN/mydroiddeck" <<'MD_EOF'
 #!/usr/bin/env bash
-# MyDroidDeck server control — run | start | stop | restart | status | open | readme
+# MyDroidDeck server control — run | start | stop | restart | status | open | readme | usb
 #
 #   (no argument) / run   run the server in the foreground (used by systemd)
 #   start                 start it in the background (systemd --user if available)
@@ -657,6 +743,8 @@ write_file "$BIN/mydroiddeck" <<'MD_EOF'
 #   status                is it running, and which version?
 #   open                  start it if needed and open the Configuration page
 #   readme                open readme.txt
+#   usb                   forward the port over the USB cable (adb reverse)
+#   usb-off               undo the USB port forwarding
 set -euo pipefail
 
 BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -754,6 +842,53 @@ open_readme() {
     echo "$readme"
 }
 
+# adb comes from the Android SDK platform-tools (adb.exe when this runs under WSL).
+resolve_adb() {
+    local candidate
+    for candidate in adb adb.exe; do
+        if have "$candidate"; then
+            command -v "$candidate"
+            return 0
+        fi
+    done
+    local sdk
+    for sdk in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}"; do
+        if [ -n "$sdk" ] && [ -x "$sdk/platform-tools/adb" ]; then
+            echo "$sdk/platform-tools/adb"
+            return 0
+        fi
+        if [ -n "$sdk" ] && [ -x "$sdk/platform-tools/adb.exe" ]; then
+            echo "$sdk/platform-tools/adb.exe"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# USB cable: forward the server port from the phone to this machine, so the app
+# reaches the server at http://127.0.0.1:<port>/ with no network at all.
+connect_usb() {
+    local adb
+    if ! adb="$(resolve_adb)"; then
+        echo "adb nao encontrado (instale o Android SDK platform-tools)." >&2
+        return 1
+    fi
+    if ! is_running; then start_server >/dev/null; fi
+    "$adb" reverse "tcp:$PORT" "tcp:$PORT" >/dev/null
+    echo "adb reverse tcp:$PORT tcp:$PORT"
+    echo "no app, use: $URL"
+}
+
+disconnect_usb() {
+    local adb
+    if ! adb="$(resolve_adb)"; then
+        echo "adb nao encontrado." >&2
+        return 1
+    fi
+    "$adb" reverse --remove "tcp:$PORT" >/dev/null 2>&1 || true
+    echo "adb reverse --remove tcp:$PORT"
+}
+
 case "${1:-run}" in
 run) run_foreground ;;
 start) start_server ;;
@@ -779,8 +914,10 @@ open)
     open_url "$URL"
     ;;
 readme) open_readme ;;
+usb) connect_usb ;;
+usb-off) disconnect_usb ;;
 -h | --help | help)
-    sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
     ;;
 *)
     echo "uso: myroiddeck [run|start|stop|restart|status|open|readme]" >&2
@@ -806,7 +943,7 @@ write_file "$PREFIX/tools/windows-shortcut.ps1" <<'PS1_EOF'
     distro and runs the matching bin/mydroiddeck subcommand.
 
     Usage:
-      powershell -File windows-shortcut.ps1 -Action add -Prefix <linux-prefix> [-Distro N]
+      powershell -File windows-shortcut.ps1 -Action add -Prefix <linux-prefix> [-Distro N] [-ConnectUsb]
       powershell -File windows-shortcut.ps1 -Action remove
 
     NOTE: keep this file pure ASCII (Windows PowerShell 5.1 reads .ps1 files
@@ -816,7 +953,8 @@ write_file "$PREFIX/tools/windows-shortcut.ps1" <<'PS1_EOF'
 param(
     [Parameter(Mandatory = $true)][ValidateSet('add', 'remove')][string]$Action,
     [string]$Prefix = '',
-    [string]$Distro = ''
+    [string]$Distro = '',
+    [switch]$ConnectUsb
 )
 
 $ErrorActionPreference = 'Stop'
@@ -829,6 +967,9 @@ $Entries = @(
     @{ Name = 'Reiniciar servidor MyDroidDeck'; Sub = 'restart' },
     @{ Name = 'readme.txt'; Sub = 'readme' }
 )
+if ($ConnectUsb) {
+    $Entries += @{ Name = 'Conectar por USB'; Sub = 'usb' }
+}
 $MenuDir = Join-Path ([Environment]::GetFolderPath('Programs')) 'MyDroidDeck'
 $DesktopMain = Join-Path ([Environment]::GetFolderPath('Desktop')) 'MyDroidDeck.lnk'
 
@@ -879,9 +1020,15 @@ if [ ! -f "$DATA/runtime.json" ]; then
     else
         START_ON_LOGON=true
     fi
+    # Wi-Fi/LAN: the server must listen on the network, not only on 127.0.0.1.
+    if connect_has wifi; then
+        VISIBLE_ON_NETWORK=true
+    else
+        VISIBLE_ON_NETWORK=false
+    fi
     write_file "$DATA/runtime.json" <<EOF
 {
-  "visible_on_network": false,
+  "visible_on_network": $VISIBLE_ON_NETWORK,
   "port": $PORT,
   "start_on_logon": $START_ON_LOGON
 }
@@ -912,3 +1059,4 @@ info "config   : http://127.0.0.1:$PORT/"
 info "dados    : $DATA"
 info "log      : $PREFIX/logs/server.log"
 info "autostart: $MODE"
+info "conectividade: $(connect_description)"

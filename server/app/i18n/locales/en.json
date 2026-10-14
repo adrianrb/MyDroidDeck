@@ -82,5 +82,18 @@
   "admin.pick_icon_title": "Select the icon",
   "admin.pick_icon_filter": "Icons (*.ico;*.png;*.exe;*.dll)|*.ico;*.png;*.exe;*.dll|All files (*.*)|*.*",
   "admin.buttons_editor_hint": "Buttons in deck order. Drag to rearrange before saving.",
-  "admin.version_label": "Server version"
+  "admin.version_label": "Server version",
+  "admin.connectivity": "Connectivity",
+  "admin.connectivity_hint": "How the phone reaches this server. Pick one or more: USB over the cable or Wi-Fi on the LAN.",
+  "admin.transport_usb": "USB (cable)",
+  "admin.usb_hint": "Plug the phone into the PC with the cable, with USB debugging on, and run the command below. In the app, use the 127.0.0.1 address with the same port.",
+  "admin.usb_command": "Command (adb reverse)",
+  "admin.usb_app_url": "App address",
+  "admin.usb_connect": "Connect over USB",
+  "admin.usb_connected": "Command sent to adb (adb reverse). Check the result in the server log.",
+  "admin.usb_helper_hint": "Needs adb (Android SDK platform-tools) on this computer. On Windows, the “Connect over USB” Start-menu shortcut does the same.",
+  "admin.transport_wifi": "Wi-Fi (LAN)",
+  "admin.wifi_hint": "Check “Visible on the network” above and open the port in the Windows Firewall so the phone can reach this PC over the network.",
+  "admin.transport_bluetooth": "Bluetooth",
+  "admin.bluetooth_pending": "Not available yet: the app will talk to the server directly over Bluetooth (RFCOMM) in a future version."
 }

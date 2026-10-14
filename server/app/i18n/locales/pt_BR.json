@@ -82,5 +82,18 @@
   "admin.pick_icon_title": "Selecione o ícone",
   "admin.pick_icon_filter": "Ícones (*.ico;*.png;*.exe;*.dll)|*.ico;*.png;*.exe;*.dll|Todos os arquivos (*.*)|*.*",
   "admin.buttons_editor_hint": "Botões na ordem do deck. Arraste para reorganizar antes de salvar.",
-  "admin.version_label": "Versão do servidor"
+  "admin.version_label": "Versão do servidor",
+  "admin.connectivity": "Conectividade",
+  "admin.connectivity_hint": "Como o celular alcança este servidor. Escolha uma ou mais opções: USB pelo cabo ou Wi-Fi pela rede local.",
+  "admin.transport_usb": "USB (cabo)",
+  "admin.usb_hint": "Ligue o celular ao PC pelo cabo, com a depuração USB ativada, e rode o comando abaixo. No app, use o endereço 127.0.0.1 com a mesma porta.",
+  "admin.usb_command": "Comando (adb reverse)",
+  "admin.usb_app_url": "Endereço para o app",
+  "admin.usb_connect": "Conectar por USB",
+  "admin.usb_connected": "Comando enviado ao adb (adb reverse). Confira o resultado no log do servidor.",
+  "admin.usb_helper_hint": "Precisa do adb (Android SDK platform-tools) neste computador. No Windows, o atalho “Conectar por USB” do menu Iniciar faz o mesmo.",
+  "admin.transport_wifi": "Wi-Fi (rede local)",
+  "admin.wifi_hint": "Marque “Visível na rede” acima e libere a porta no firewall do Windows para o celular alcançar este PC pela rede.",
+  "admin.transport_bluetooth": "Bluetooth",
+  "admin.bluetooth_pending": "Ainda não disponível: o app vai falar com o servidor direto por Bluetooth (RFCOMM) numa próxima versão."
 }

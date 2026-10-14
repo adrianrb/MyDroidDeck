@@ -35,6 +35,26 @@
     </form>
 </div>
 
+<h3>{{ t("admin.connectivity") }}</h3>
+<p class="muted small">{{ t("admin.connectivity_hint") }}</p>
+<div class="card">
+    <p><strong>{{ t("admin.transport_usb") }}</strong></p>
+    <p class="muted small">{{ t("admin.usb_hint") }}</p>
+    <p>{{ t("admin.usb_command") }}: <code>adb reverse tcp:{{ config.port }} tcp:{{ config.port }}</code></p>
+    <p>{{ t("admin.usb_app_url") }}: <code>http://127.0.0.1:{{ config.port }}/</code></p>
+    <form method="post" action="/admin/config/usb">
+        <button type="submit" class="ghost">{{ t("admin.usb_connect") }}</button>
+    </form>
+    {% if usb %}<div class="alert success">{{ t("admin.usb_connected") }}</div>{% endif %}
+    <p class="muted small">{{ t("admin.usb_helper_hint") }}</p>
+
+    <p><strong>{{ t("admin.transport_wifi") }}</strong></p>
+    <p class="muted small">{{ t("admin.wifi_hint") }}</p>
+
+    <p><strong>{{ t("admin.transport_bluetooth") }}</strong></p>
+    <p class="muted small">{{ t("admin.bluetooth_pending") }}</p>
+</div>
+
 <h3>{{ t("admin.profiles") }}</h3>
 <p><a class="button ghost" href="/admin/profiles">{{ t("admin.manage_profiles") }}</a></p>
 

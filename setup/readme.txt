@@ -12,6 +12,7 @@ Windows (menu Iniciar > MyDroidDeck):
   - Iniciar servidor              liga o servidor (sem janela)
   - Parar servidor                desliga o servidor
   - Reiniciar servidor            desliga e liga de novo
+  - Conectar por USB              encaminha a porta pelo cabo (adb reverse)
 
   Ou, na pasta de instalacao:
     start.cmd   stop.cmd   restart.cmd   status.cmd
@@ -27,6 +28,32 @@ Pagina de configuracao
 
 A porta pode ser alterada na propria pagina (Configuracao > Porta). O endereco
 abre sempre no Firefox configurado - nunca no navegador padrao do Windows.
+
+
+Conectar o celular
+------------------
+Na instalacao voce escolhe como o celular alcanca este servidor (pode marcar
+mais de uma opcao). A pagina de configuracao mostra os mesmos enderecos e o
+botao "Conectar por USB".
+
+  Wi-Fi / rede local
+    Marque "Visivel na rede" e libere a porta no firewall do Windows (veja
+    setup/README.md no repositorio). No app, leia o QR Code em
+    Dispositivos > Parear novo.
+
+  USB (cabo)
+    Ligue o celular com a depuracao USB ativada e use o atalho "Conectar por
+    USB" (ou tools\control.ps1 -Action usb-connect -Action usb-disconnect para
+    desfazer). O equivalente em linha de comando, usando a porta configurada:
+
+      adb reverse tcp:56997 tcp:56997
+
+    No app, aponte o servidor para http://127.0.0.1:56997/ - nao precisa de
+    rede. Precisa do adb (Android SDK platform-tools) neste PC.
+
+  Bluetooth
+    Ainda nao disponivel (previsto para uma proxima versao: o app falara com o
+    servidor direto por Bluetooth).
 
 
 Onde ficam os dados

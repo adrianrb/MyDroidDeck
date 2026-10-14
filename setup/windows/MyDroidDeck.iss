@@ -10,8 +10,13 @@
 ; add a hidden launcher to the user's Startup folder, and on finish starts the
 ; server, waits until it answers, then opens http://127.0.0.1:56997/ in the
 ; browser (the root redirects to /admin/config). It also adds Start-menu
-; shortcuts for Configuracao, Iniciar, Parar, Reiniciar and readme.txt. The
-; admin pages have NO login; the REST API still uses device tokens.
+; shortcuts for Configuracao, Iniciar, Parar, Reiniciar, Conectar por USB and
+; readme.txt. The admin pages have NO login; the REST API still uses device
+; tokens.
+;
+; The wizard asks how the phone will reach the server (multiple choice): USB
+; (adb reverse over the cable), Wi-Fi/LAN (visible on the network) and Bluetooth
+; (listed but not available yet). See setup/README.md.
 ;
 ; Note: enabling LAN access ("Visivel na rede") also needs a Windows Firewall
 ; rule, which requires an elevated PowerShell once - see setup/README.md.
@@ -55,9 +60,30 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [CustomMessages]
 brazilianportuguese.UninstallDataPrompt=Deseja apagar também todos os dados do MyDroidDeck?%n%nIsso remove perfis, dispositivos pareados, ações, ícones e logs (a pasta %1).%n%nEscolha "Não" para manter os dados.
 english.UninstallDataPrompt=Also delete all MyDroidDeck data?%n%nThis removes profiles, paired devices, actions, icons and logs (the %1 folder).%n%nChoose "No" to keep the data.
+; Connectivity choices (see setup/README.md): how the phone reaches the server.
+brazilianportuguese.GroupConnectivity=Conectividade:
+brazilianportuguese.TaskConnectUsb=USB (cabo): encaminhar a porta com o adb reverse
+brazilianportuguese.TaskConnectWifi=Wi-Fi/rede local: liberar o servidor na rede
+brazilianportuguese.TaskConnectBluetooth=Bluetooth (em breve - ainda não disponível)
+brazilianportuguese.GroupStartup=Inicialização:
+brazilianportuguese.TaskStartup=Iniciar o servidor no logon do Windows
+brazilianportuguese.WifiFirewallNote=Para o Wi-Fi funcionar, libere a porta no Firewall do Windows (a página de Configuração explica como).
+english.GroupConnectivity=Connectivity:
+english.TaskConnectUsb=USB (cable): forward the port with adb reverse
+english.TaskConnectWifi=Wi-Fi/LAN: make the server visible on the network
+english.TaskConnectBluetooth=Bluetooth (coming soon - not available yet)
+english.GroupStartup=Startup:
+english.TaskStartup=Start the server at Windows logon
+english.WifiFirewallNote=For Wi-Fi to work, open the port in the Windows Firewall (the Settings page explains how).
 
 [Tasks]
-Name: "startup"; Description: "Iniciar o servidor no logon do Windows"; GroupDescription: "Inicializacao:"; Flags: checkedonce
+; Connectivity: the phone can reach the server over the USB cable (adb reverse,
+; loopback on the phone) and/or over the LAN. Bluetooth has no transport yet, so
+; its item is disabled in InitializeWizard.
+Name: "connect_usb"; Description: "{cm:TaskConnectUsb}"; GroupDescription: "{cm:GroupConnectivity}"; Flags: checkedonce
+Name: "connect_wifi"; Description: "{cm:TaskConnectWifi}"; GroupDescription: "{cm:GroupConnectivity}"; Flags: checkedonce
+Name: "connect_bluetooth"; Description: "{cm:TaskConnectBluetooth}"; GroupDescription: "{cm:GroupConnectivity}"; Flags: unchecked
+Name: "startup"; Description: "{cm:TaskStartup}"; GroupDescription: "{cm:GroupStartup}"; Flags: checkedonce
 
 [Files]
 Source: "{#StageDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
@@ -82,10 +108,15 @@ Name: "{group}\Iniciar servidor MyDroidDeck"; Filename: "powershell.exe"; Parame
 Name: "{group}\Parar servidor MyDroidDeck"; Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action stop"; IconFilename: "{app}\app.ico"; Comment: "Desligar o servidor"
 Name: "{group}\Reiniciar servidor MyDroidDeck"; Filename: "powershell.exe"; Parameters: "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action restart"; IconFilename: "{app}\app.ico"; Comment: "Reiniciar o servidor"
 Name: "{group}\readme.txt"; Filename: "{app}\readme.txt"; IconFilename: "{app}\app.ico"; Comment: "Como usar o MyDroidDeck"
+; USB cable: forwards the server port to the phone with adb (only offered when
+; the USB connectivity option was chosen).
+Name: "{group}\Conectar por USB"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action usb-connect"; IconFilename: "{app}\app.ico"; Comment: "Encaminhar a porta do servidor pelo cabo USB (adb reverse)"; Tasks: connect_usb
 Name: "{group}\Desinstalar MyDroidDeck"; Filename: "{uninstallexe}"; IconFilename: "{app}\app.ico"
 
 [Run]
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action enable-logon"; Tasks: startup; Flags: runhidden
+; Wire the cable to the server right away when USB was chosen (silent included).
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action usb-connect"; Tasks: connect_usb; Flags: runhidden
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\open-console.ps1"""; Description: "Iniciar o servidor e abrir a Configuracao"; Flags: postinstall nowait skipifsilent
 
 [UninstallRun]
@@ -94,11 +125,22 @@ Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Fil
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\control.ps1"" -Action stop"; Flags: runhidden; RunOnceId: "StopServer"
 
 [Code]
+{ The Bluetooth transport does not exist yet (the server has no RFCOMM
+  listener), so its connectivity item is shown but cannot be selected. }
+procedure InitializeWizard();
+var
+  Index: Integer;
+begin
+  for Index := 0 to WizardForm.TasksList.Items.Count - 1 do
+    if Pos('Bluetooth', WizardForm.TasksList.Items[Index]) > 0 then
+      WizardForm.TasksList.ItemEnabled[Index] := False;
+end;
+
 { Write the initial runtime.json with the installer's choices, unless the user
   already has one (for example, reinstalling over an existing install). }
 procedure WriteRuntimeConfig();
 var
-  DataDir, ConfigFile, StartOnLogon, Json: string;
+  DataDir, ConfigFile, StartOnLogon, VisibleOnNetwork, Json: string;
 begin
   DataDir := ExpandConstant('{app}\data');
   ConfigFile := DataDir + '\runtime.json';
@@ -112,8 +154,14 @@ begin
   else
     StartOnLogon := 'false';
 
+  { Wi-Fi/LAN: the server must listen on the network, not only on 127.0.0.1. }
+  if WizardIsTaskSelected('connect_wifi') then
+    VisibleOnNetwork := 'true'
+  else
+    VisibleOnNetwork := 'false';
+
   Json := '{' + #13#10 +
-          '  "visible_on_network": false,' + #13#10 +
+          '  "visible_on_network": ' + VisibleOnNetwork + ',' + #13#10 +
           '  "port": {#DefaultPort},' + #13#10 +
           '  "start_on_logon": ' + StartOnLogon + #13#10 +
           '}' + #13#10;
@@ -124,6 +172,23 @@ procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
     WriteRuntimeConfig();
+end;
+
+{ Remind the user about the firewall when Wi-Fi was chosen (the installer is
+  not elevated, so it cannot add the rule itself). }
+var
+  ConnectivityNoteShown: Boolean;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if (CurPageID = wpFinished) and not ConnectivityNoteShown then
+  begin
+    ConnectivityNoteShown := True;
+    if WizardIsTaskSelected('connect_wifi') then
+      WizardForm.FinishedLabel.Caption :=
+        WizardForm.FinishedLabel.Caption + #13#10 + #13#10 +
+        ExpandConstant('{cm:WifiFirewallNote}');
+  end;
 end;
 
 { Set in InitializeUninstall when the user asks to wipe everything. }
