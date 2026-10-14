@@ -42,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -90,7 +91,9 @@ fun DeckScreen(
     var loading by remember { mutableStateOf(true) }
     var failed by remember { mutableStateOf(false) }
     var profiles by remember { mutableStateOf(emptyList<DeckProfile>()) }
-    var selected by remember { mutableStateOf(0) }
+    // The chosen profile is kept by name so it survives a rotation (which recreates the
+    // screen, losing plain `remember` state) and a reload.
+    var selectedName by rememberSaveable { mutableStateOf("") }
     var status by remember { mutableStateOf<DeckStatus?>(null) }
     var lastLabel by remember { mutableStateOf<String?>(null) }
     var reloads by remember { mutableStateOf(0) }
@@ -122,9 +125,9 @@ fun DeckScreen(
         loading = true
         failed = false
         try {
-            val loaded = ApiClient.api().listProfiles()
-            profiles = loaded
-            selected = firstProfileIndex(loaded).coerceAtLeast(0)
+            // The chosen profile lives in `selectedName` and is resolved while rendering,
+            // so a reload (e.g. after a rotation) never jumps back to the first profile.
+            profiles = ApiClient.api().listProfiles()
         } catch (e: HttpException) {
             // Revoked/expired token: drop it and re-pair.
             if (e.code() == 401) onUnauthorized() else failed = true
@@ -156,17 +159,22 @@ fun DeckScreen(
                         configuration.screenHeightDp,
                     ) - padding,
                 )
-                val profile = profiles[selected.coerceIn(0, profiles.lastIndex)]
+                // Resolved by name so a rotation or a reload keeps the user's profile.
+                val selected = profileIndexByName(profiles, selectedName)
+                    .coerceIn(0, profiles.lastIndex)
+                val profile = profiles[selected]
                 DeckHeader(
                     name = profile.name,
                     withArrows = profiles.size > 1,
                     onPrevious = {
-                        selected = cycleProfileIndex(selected, profiles.size, -1)
+                        selectedName =
+                            profiles[cycleProfileIndex(selected, profiles.size, -1)].name
                         arranging = false
                         swapSel = null
                     },
                     onNext = {
-                        selected = cycleProfileIndex(selected, profiles.size, 1)
+                        selectedName =
+                            profiles[cycleProfileIndex(selected, profiles.size, 1)].name
                         arranging = false
                         swapSel = null
                     },
@@ -239,8 +247,7 @@ fun DeckScreen(
                                                 if (i == selected) p.copy(buttons = swapped) else p
                                             }
                                             scope.launch {
-                                                val target =
-                                                    profiles[selected.coerceIn(0, profiles.lastIndex)]
+                                                val target = profiles[selected]
                                                 try {
                                                     ApiClient.api()
                                                         .updateProfile(target.id, target)

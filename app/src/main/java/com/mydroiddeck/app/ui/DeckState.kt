@@ -29,6 +29,18 @@ fun swapButtons(buttons: List<DeckButton>, from: Int, to: Int): List<DeckButton>
 fun firstProfileIndex(profiles: List<DeckProfile>): Int =
     if (profiles.isEmpty()) -1 else 0
 
+/**
+ * Index of the profile named [name], or [firstProfileIndex] when there is no such
+ * profile (nothing chosen yet, or the profile was renamed/removed server-side).
+ *
+ * The deck remembers the profile *by name* so a rotation (which recreates the screen)
+ * or a reload keeps the one the user picked, as long as it still exists.
+ */
+fun profileIndexByName(profiles: List<DeckProfile>, name: String): Int {
+    val found = profiles.indexOfFirst { it.name == name }
+    return if (found >= 0) found else firstProfileIndex(profiles)
+}
+
 /** Steps [current] by [step], wrapping around a list of [size] profiles. */
 fun cycleProfileIndex(current: Int, size: Int, step: Int): Int =
     if (size <= 0) -1 else ((current + step) % size + size) % size

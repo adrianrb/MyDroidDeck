@@ -14,4 +14,10 @@ app:
         a grade passa a ser dimensionada pelo lado curto da tela (4 colunas no
         portrait); em landscape o botão mantém o tamanho e a grade ganha colunas
         (9 num celular de 360dp) em vez de esticar as 4 chaves
-    
+    - ao rotacionar volta ao primeiro perfil: deve ficar no selecionado - feito 0.5.5:
+        o perfil escolhido passa a ser guardado pelo *nome* (rememberSaveable +
+        profileIndexByName), entao a rotacao (que recria a tela) e o "Atualizar"
+        voltam para ele; so cai no primeiro se o perfil sumiu/foi renomeado
+    - [ ] cabecalho do deck fica sob a status bar (o topo dos botoes de trocar de
+        perfil nao recebe toque: o SystemUI consome os ~110px de cima) - aplicar
+        os insets do sistema

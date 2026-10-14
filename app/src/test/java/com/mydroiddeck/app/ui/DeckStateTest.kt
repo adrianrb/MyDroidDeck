@@ -39,6 +39,22 @@ class DeckStateTest {
     }
 
     @Test
+    fun profileIndexByName_keepsTheProfileTheUserPicked() {
+        val deck = listOf(DeckProfile("Sistema", "pt_BR"), DeckProfile("Utilidades", "pt_BR"))
+        assertEquals(1, profileIndexByName(deck, "Utilidades"))
+        // Rotation recreates the screen and reloads the same list: still the picked one.
+        assertEquals(1, profileIndexByName(deck, "Utilidades"))
+    }
+
+    @Test
+    fun profileIndexByName_fallsBackToTheFirstProfile() {
+        val deck = listOf(DeckProfile("Sistema", "pt_BR"), DeckProfile("Utilidades", "pt_BR"))
+        assertEquals(0, profileIndexByName(deck, ""))          // nothing picked yet
+        assertEquals(0, profileIndexByName(deck, "Jogos"))     // profile renamed/removed
+        assertEquals(-1, profileIndexByName(emptyList(), "Sistema"))
+    }
+
+    @Test
     fun swapButtons_swapsPositionsAndReindexes() {
         val swapped = swapButtons(buttons("a", "b", "c", "d"), from = 1, to = 2)
         assertEquals(listOf("a", "c", "b", "d"), swapped.map { it.action })

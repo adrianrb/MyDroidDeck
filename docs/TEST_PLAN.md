@@ -71,7 +71,7 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | A-04 | Server unreachable | UI shows the error state + retry (no crash) | ✅ device check |
 | A-05 | Reconnect after network drop | Grid state re-synced | ✅ device check (retry loads the deck) |
 | A-06 | Switch app locale pt-BR ⇄ en | All visible strings update; no hardcoded text |
-| A-07 | Rotate / resize | Grid reflows without losing selection | ✅ device check |
+| A-07 | Rotate / resize | Grid reflows **and keeps the user's profile**: the deck remembers the chosen profile *by name* (`profileIndexByName`), so the recreated screen (rotation) or a reload resolves it back — falling back to the first profile only when it was renamed/removed server-side | ✅ `DeckStateTest.kt` + device check |
 | A-08 | Profile imported with accented labels | Labels render correctly (UTF-8) |
 | A-09 | App reports its version | Matches `X.Y.Z` from the build (`BuildConfig.VERSION_NAME`, shown in Configuração > Sobre) | ✅ device check |
 | A-10 | Dispatch outcome mapping | `ok`/`unknown`/`failed`/`timeout` → Enviado / não configurada / Falha | ✅ `DeckStateTest.kt` |
@@ -145,13 +145,16 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 
 Run with app **0.4.0** against server **0.4.0** (HTTPS), driving the app through `adb`
 (taps by text via `uiautomator dump`) and inspecting the Windows host with `tasklist`.
+Note (0.5.5): Compose ignores the 0-duration `adb shell input tap`; press a target with
+`adb shell input swipe X Y X Y 150` (a 150 ms press at the same point) instead, and tap
+header buttons in the band below the status bar (SystemUI owns the top ~110 px).
 
 | Check | Result |
 | --- | --- |
 | Standard actions, one by one (tap → status → Windows process → closed after ~10 s) | `bloco.notas`→Notepad ✅, `calc`→Calculator ✅, `gerenciador.tarefas`→Taskmgr ✅ (elevated: not closable via adb), `kitty`→kiTTY ✅, `explorer`→new window ✅ (closed via COM), `paint`→Paint ✅, `obs.gravar`→"Falha ao enviar" ✅ (OBS not installed), `script.exemplo`→"Falha ao enviar" ✅ (`C:\scripts\exemplo.bat` missing) |
 | Button icons | 6 of the 8 actions serve a real PNG (`GET /icon` → 200); the 2 without are exactly the missing programs (404 → label only) |
 | Monkey (seeds 1, 42, 987654 × 400 events, throttle 150 ms) | 1200 events, **0 crashes / 0 ANR**, app pid stable; 29 real dispatches (random taps do launch programs) |
-| Rotation (landscape ⇄ portrait) | Deck re-renders, same state, 0 crashes. Keys keep their size (A-21): measured via `uiautomator dump` on this 1080x2400 / 400dpi device — portrait 4 columns of 255 px, landscape (2400x1080) 9 columns of 260 px, the key itself 229 px → 234 px (+2%, the column rounding) |
+| Rotation (landscape ⇄ portrait) | Deck re-renders, 0 crashes, and **keeps the profile the user picked** (A-07): with *Utilidades* selected, portrait → landscape → portrait stayed on *Utilidades* (only the last status line resets, expected). Keys keep their size (A-21): measured via `uiautomator dump` on this 1080x2400 / 400dpi device — portrait 4 columns of 255 px, landscape (2400x1080) 9 columns of 260 px, the key itself 229 px → 234 px (+2%, the column rounding) |
 | Server unreachable → restart | Error state + "Tentar de novo"; retry loads the deck (A-04/A-05) |
 | Revoked token (401) | App clears the token and returns to pairing; re-pairing in the UI restores the deck (E-03) |
 | 10 rapid taps on one button | 10 dispatches, 0 crashes, last status correct |
