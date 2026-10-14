@@ -1,4 +1,8 @@
 server:
+    - em Configuracao, opcoes "Exportar..." (json) e "Importar..." - feito 0.5.3:
+        exporta Configuracao (porta/rede/logon) + acoes + perfis num JSON;
+        importar faz upsert por nome/chave, restaura as opcoes e nao inclui os
+        dispositivos pareados (o banco guarda so o hash do token; parear de novo)
     - na instalação, oferecer opções de conectividade (multipla escolha) - feito 0.5.2:
         [x] USB - atalho "Conectar por USB" + adb reverse tcp:<porta> tcp:<porta>
         [x] Wifi - visible_on_network + lembrete do firewall do Windows

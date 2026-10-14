@@ -55,6 +55,21 @@
     <p class="muted small">{{ t("admin.bluetooth_pending") }}</p>
 </div>
 
+<h3>{{ t("admin.backup") }}</h3>
+<div class="card">
+    <p><a class="button ghost" href="/admin/config/export" download>{{ t("admin.export") }}</a></p>
+    <p class="muted small">{{ t("admin.export_hint") }}</p>
+
+    <form method="post" action="/admin/config/import" enctype="multipart/form-data">
+        <div class="input-row">
+            <input type="file" name="file" accept=".json,application/json" required>
+            <button type="submit" class="ghost">{{ t("admin.import") }}</button>
+        </div>
+    </form>
+    <p class="muted small">{{ t("admin.import_hint") }}</p>
+    {% if import_message %}<div class="alert success">{{ import_message }}</div>{% endif %}
+</div>
+
 <h3>{{ t("admin.profiles") }}</h3>
 <p><a class="button ghost" href="/admin/profiles">{{ t("admin.manage_profiles") }}</a></p>
 

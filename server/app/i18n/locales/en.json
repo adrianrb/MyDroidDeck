@@ -95,5 +95,15 @@
   "admin.transport_wifi": "Wi-Fi (LAN)",
   "admin.wifi_hint": "Check “Visible on the network” above and open the port in the Windows Firewall so the phone can reach this PC over the network.",
   "admin.transport_bluetooth": "Bluetooth",
-  "admin.bluetooth_pending": "Not available yet: the app will talk to the server directly over Bluetooth (RFCOMM) in a future version."
+  "admin.bluetooth_pending": "Not available yet: the app will talk to the server directly over Bluetooth (RFCOMM) in a future version.",
+  "admin.backup": "Backup",
+  "admin.export": "Export…",
+  "admin.export_hint": "Downloads a JSON file with the settings, the actions and the profiles — handy as a copy or to move everything to another install.",
+  "admin.import": "Import…",
+  "admin.import_hint": "Pick a file exported before. Profiles and actions that already exist (same name/key) are updated; everything else is kept. Paired devices are not in the file: the phone must pair again.",
+  "admin.import_ok": "Import finished: {profiles} profile(s) and {actions} action(s).",
+  "admin.import_settings": " The settings were restored too — restart the server for the port and network to apply.",
+  "error.import_invalid": "Invalid file: the JSON could not be read.",
+  "error.import_format": "Invalid file: not a MyDroidDeck backup.",
+  "error.import_version": "Backup from a version this server does not support."
 }

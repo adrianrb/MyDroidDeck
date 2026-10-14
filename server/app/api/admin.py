@@ -9,7 +9,16 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+)
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
@@ -25,6 +34,15 @@ from app.core.admin_auth import (
     verify_credentials,
 )
 from app.core.config import settings
+from app.core.export_import import (
+    ExportError,
+    apply_import,
+    build_export,
+    export_filename,
+    export_json,
+    export_moment,
+    parse_export,
+)
 from app.core.file_picker import pick_file
 from app.core.icons import (
     invalidate_custom_icon,
@@ -201,20 +219,99 @@ def _apply_control(action: str) -> None:
         pass
 
 
+def _import_message(request: Request) -> str | None:
+    """Localized confirmation for a finished import (counts arrive in the query)."""
+    if not request.query_params.get("imported"):
+        return None
+    locale = negotiate(request.headers.get("accept-language"))
+
+    def count(name: str) -> str:
+        value = request.query_params.get(name, "")
+        return str(int(value)) if value.isdigit() else "0"
+
+    message = translate("admin.import_ok", locale).format(
+        profiles=count("profiles"), actions=count("actions")
+    )
+    if request.query_params.get("settings"):
+        message += translate("admin.import_settings", locale)
+    return message
+
+
+def _config_context(request: Request, **overrides) -> dict:
+    """Context for ``config.html``: runtime config plus the flash flags/params."""
+    return {
+        **_base_context(request),
+        "config": load_runtime_config(),
+        "error": None,
+        "saved": request.query_params.get("saved"),
+        "restarted": request.query_params.get("restarted"),
+        "usb": request.query_params.get("usb"),
+        "import_message": _import_message(request),
+        **overrides,
+    }
+
+
 @router.get("/config", response_class=HTMLResponse)
 def config_page(request: Request):
     return templates.TemplateResponse(
-        request=request,
-        name="config.html",
-        context={
-            **_base_context(request),
-            "config": load_runtime_config(),
-            "error": None,
-            "saved": request.query_params.get("saved"),
-            "restarted": request.query_params.get("restarted"),
-            "usb": request.query_params.get("usb"),
+        request=request, name="config.html", context=_config_context(request)
+    )
+
+
+@router.get("/config/export")
+def export_config(session: Session = Depends(get_session)) -> Response:
+    """Download the whole configuration as JSON (settings + actions + profiles).
+
+    *Importar…* on the same page reads this file back, so the admin can move the
+    whole setup to another install or restore it after wiping the data folder.
+    """
+    moment = export_moment()
+    bundle = build_export(session, load_runtime_config(), __version__, moment)
+    return Response(
+        content=export_json(bundle),
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="{export_filename(moment)}"',
+            "Cache-Control": "no-store",
         },
     )
+
+
+@router.post("/config/import")
+async def import_config(
+    request: Request,
+    file: UploadFile = File(...),
+    session: Session = Depends(get_session),
+):
+    """Apply an exported JSON file (upsert by profile name / action key).
+
+    Existing entries keep their ids and pairings; the imported settings (when the
+    file carries them) are saved to ``runtime.json`` and the logon helper is
+    reconciled, exactly like saving the settings form.
+    """
+    context = _config_context(request)
+    try:
+        bundle = parse_export(await file.read())
+    except ExportError as exc:
+        context["error"] = translate(exc.key, context["locale"])
+        return templates.TemplateResponse(
+            request=request, name="config.html", context=context, status_code=400
+        )
+    report = apply_import(session, bundle)
+    query = f"imported=1&profiles={report.profiles}&actions={report.actions}"
+    if bundle.settings is not None:
+        save_runtime_config(
+            RuntimeConfig(
+                visible_on_network=bundle.settings.visible_on_network,
+                port=bundle.settings.port,
+                start_on_logon=bundle.settings.start_on_logon,
+            )
+        )
+        _apply_control(
+            "enable-logon" if bundle.settings.start_on_logon else "disable-logon"
+        )
+        query += "&settings=1"
+    return RedirectResponse(url=f"/admin/config?{query}", status_code=303)
 
 
 @router.post("/config")
@@ -228,16 +325,13 @@ def save_config(
     try:
         port_value = validate_port(port)
     except ValueError:
-        context.update(
-            {
-                "config": load_runtime_config(),
-                "error": translate("error.invalid_port", context["locale"]),
-                "saved": None,
-                "restarted": None,
-            }
-        )
         return templates.TemplateResponse(
-            request=request, name="config.html", context=context, status_code=400
+            request=request,
+            name="config.html",
+            context=_config_context(
+                request, error=translate("error.invalid_port", context["locale"])
+            ),
+            status_code=400,
         )
 
     config = RuntimeConfig(

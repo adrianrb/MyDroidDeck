@@ -154,6 +154,29 @@ devolve o PNG em **base64 pelo stdout** (não depende de caminho compartilhado):
 - Com `MYDROIDDECK_EXEC_ENGINE=dry-run` (testes) nada é extraído: `/icon` responde
   404.
 
+## Backup da configuração (Exportar… / Importar…)
+
+O cartão **Backup** em `/admin/config` guarda ou restaura tudo o que o admin
+configura, sem tocar no banco à mão:
+
+- **Exportar…** (`GET /admin/config/export`) baixa um JSON
+  (`mydroiddeck-AAAAMMDD-HHMMSS.json`) com a **Configuração** (visível na rede,
+  porta, iniciar no logon), os **bindings de ação** e os **perfis com seus botões**
+  (o `index` define a ordem do deck).
+- **Importar…** (`POST /admin/config/import`, campo de arquivo) lê um arquivo
+  exportado antes. É um **upsert**: perfis são casados pelo **nome** e ações pela
+  **chave** — o que vem no arquivo é criado ou atualizado (os botões do perfil são
+  substituídos pelos do arquivo) e o restante do banco é mantido. Ids de perfis e os
+  dispositivos pareados **não** são afetados.
+- O arquivo carrega as opções de Configuração: ao importar, elas voltam para
+  `data/runtime.json` (o helper de logon é reconciliado igual ao salvar o formulário).
+  **Reinicie o servidor** para porta/rede valerem (o aviso aparece na página).
+- Formatos inválidos, de outro programa ou de uma versão futura são recusados com
+  HTTP 400 e uma mensagem localizada (`error.import_*`); nada é gravado.
+- **Dispositivos pareados ficam de fora de propósito**: o banco guarda apenas o
+  *hash* do token, então uma restauração exige parear o celular de novo (o código de
+  pareamento continua o mesmo).
+
 ## Deploy (neste host — WSL, sem systemd/Docker)
 
 O servidor roda como um **processo destacado do terminal**: `setsid` + `nohup`,

@@ -129,6 +129,8 @@ The single entry point after install:
 | **Porta** | TCP port (default 56997). |
 | **Iniciar no logon** | Add/remove the Startup-folder launcher (via `tools\control.ps1`). |
 | **Conectividade** | How the phone reaches the server: the USB card shows the `adb reverse` command, the `http://127.0.0.1:<port>/` app address and a *Conectar por USB* button (runs `control.ps1 -Action usb-connect`); the Wi-Fi card points at *Visível na rede* + the firewall rule; Bluetooth is marked as not available yet. |
+| **Conectividade** | How the phone reaches the server: the USB card shows the `adb reverse` command, the `http://127.0.0.1:<port>/` app address and a *Conectar por USB* button (runs `control.ps1 -Action usb-connect`); the Wi-Fi card points at *Visível na rede* + the firewall rule; Bluetooth is marked as not available yet. |
+| **Backup** | **Exportar…** downloads the whole configuration as JSON (settings + actions + profiles); **Importar…** reads that file back, upserting profiles by name and actions by key and restoring the options above. Paired devices are not in the file — pair the phone again after a restore. |
 | **Perfis** / **Ações** | Shortcuts to the profile and action managers. |
 | **Reiniciar servidor** | Restarts the server so network/port changes take effect. |
 

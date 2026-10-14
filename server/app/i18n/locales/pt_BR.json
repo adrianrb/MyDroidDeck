@@ -95,5 +95,15 @@
   "admin.transport_wifi": "Wi-Fi (rede local)",
   "admin.wifi_hint": "Marque “Visível na rede” acima e libere a porta no firewall do Windows para o celular alcançar este PC pela rede.",
   "admin.transport_bluetooth": "Bluetooth",
-  "admin.bluetooth_pending": "Ainda não disponível: o app vai falar com o servidor direto por Bluetooth (RFCOMM) numa próxima versão."
+  "admin.bluetooth_pending": "Ainda não disponível: o app vai falar com o servidor direto por Bluetooth (RFCOMM) numa próxima versão.",
+  "admin.backup": "Backup",
+  "admin.export": "Exportar…",
+  "admin.export_hint": "Baixa um arquivo JSON com a Configuração, as ações e os perfis — bom para guardar uma cópia ou levar tudo para outra instalação.",
+  "admin.import": "Importar…",
+  "admin.import_hint": "Escolha um arquivo exportado antes. Perfis e ações que já existem (mesmo nome/chave) são atualizados; o restante é mantido. Os dispositivos pareados não entram no arquivo: o celular precisa parear de novo.",
+  "admin.import_ok": "Importação concluída: {profiles} perfil(is) e {actions} ação(ões).",
+  "admin.import_settings": " A Configuração também foi restaurada — reinicie o servidor para a porta e a rede valerem.",
+  "error.import_invalid": "Arquivo inválido: não foi possível ler o JSON.",
+  "error.import_format": "Arquivo inválido: não é um backup do MyDroidDeck.",
+  "error.import_version": "Backup de uma versão não suportada por este servidor."
 }
