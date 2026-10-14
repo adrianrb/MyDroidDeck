@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -74,9 +75,9 @@ import com.mydroiddeck.app.ui.theme.MyDroidDeckTheme
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 
-private const val GRID_COLUMNS = 4
 private const val BUTTON_ICON_SIZE = 42
 private const val BUTTON_CORNER_RADIUS = 18
+private val GRID_PADDING = 4.dp
 
 /** Loads the profiles from the server and renders the selected one as a deck. */
 @Composable
@@ -144,6 +145,17 @@ fun DeckScreen(
             )
             profiles.isEmpty() -> MessageState(stringResource(R.string.deck_empty))
             else -> {
+                // The keys are sized by the screen's short side, so a landscape deck
+                // gains columns instead of stretching the four portrait keys.
+                val configuration = LocalConfiguration.current
+                val padding = GRID_PADDING.value * 2
+                val columns = deckColumnCount(
+                    availableWidthDp = configuration.screenWidthDp - padding,
+                    portraitWidthDp = minOf(
+                        configuration.screenWidthDp,
+                        configuration.screenHeightDp,
+                    ) - padding,
+                )
                 val profile = profiles[selected.coerceIn(0, profiles.lastIndex)]
                 DeckHeader(
                     name = profile.name,
@@ -171,9 +183,9 @@ fun DeckScreen(
                     },
                 )
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(GRID_COLUMNS),
+                    columns = GridCells.Fixed(columns),
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(4.dp),
+                    contentPadding = PaddingValues(GRID_PADDING),
                 ) {
                     items(profile.buttons, key = { it.index }) { button ->
                         val label = buttonLabel(button)

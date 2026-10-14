@@ -10,5 +10,8 @@ server:
             adiado; os instaladores listam a opcao como indisponivel)
     - instaladores Windows (Inno) e Linux/WSL (--connectivity) oferecem USB/Wi-Fi
 app:
-    - (removido) "mostrar QRCode para Wifi e Bluetooth": nao se aplica ao app -
-        o servidor e quem mostra o QR de pareamento (Dispositivos > Parear novo)
+    - botões gigantes em landscape: usar mesmo tamanho de portrait - feito 0.5.4:
+        a grade passa a ser dimensionada pelo lado curto da tela (4 colunas no
+        portrait); em landscape o botão mantém o tamanho e a grade ganha colunas
+        (9 num celular de 360dp) em vez de esticar as 4 chaves
+    

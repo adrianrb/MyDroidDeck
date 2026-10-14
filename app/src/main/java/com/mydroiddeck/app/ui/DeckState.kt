@@ -32,3 +32,27 @@ fun firstProfileIndex(profiles: List<DeckProfile>): Int =
 /** Steps [current] by [step], wrapping around a list of [size] profiles. */
 fun cycleProfileIndex(current: Int, size: Int, step: Int): Int =
     if (size <= 0) -1 else ((current + step) % size + size) % size
+
+/** Columns the deck shows per row in portrait (see [deckColumnCount]). */
+const val DECK_GRID_COLUMNS = 4
+
+/**
+ * Columns to draw in a deck [availableWidthDp] wide when portrait is [portraitWidthDp] wide.
+ *
+ * The keys are sized by the screen's short side: portrait fits [columns] per row and a
+ * wider (landscape) screen keeps roughly that same key size — it gains columns instead of
+ * stretching the [columns] keys. The count is rounded to whichever side lands closest to
+ * the portrait size, and never drops below [columns].
+ */
+fun deckColumnCount(
+    availableWidthDp: Float,
+    portraitWidthDp: Float,
+    columns: Int = DECK_GRID_COLUMNS,
+): Int {
+    require(columns > 0) { "columns must be positive" }
+    val keySize = (portraitWidthDp / columns).coerceAtLeast(1f)
+    val fitted = availableWidthDp / keySize
+    val whole = fitted.toInt()
+    val rounded = if (fitted - whole > 0.5f) whole + 1 else whole
+    return maxOf(columns, rounded)
+}

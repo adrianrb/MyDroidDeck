@@ -60,4 +60,40 @@ class DeckStateTest {
         assertSame(original, swapButtons(original, from = 0, to = 9))
         assertSame(original, swapButtons(original, from = 1, to = 1))
     }
+
+    @Test
+    fun deckKeepsThePortraitKeySizeWhenRotated() {
+        // Phone: 352dp of grid in portrait -> 4 keys of 88dp.
+        assertEquals(4, deckColumnCount(availableWidthDp = 352f, portraitWidthDp = 352f))
+        // Same screen rotated: 792dp fits 9 columns of the very same 88dp.
+        assertEquals(9, deckColumnCount(availableWidthDp = 792f, portraitWidthDp = 352f))
+        assertEquals(
+            352f / deckColumnCount(352f, 352f),
+            792f / deckColumnCount(792f, 352f),
+            0.001f,
+        )
+    }
+
+    @Test
+    fun deckShowsFourColumnsOnANarrowOrSquareScreen() {
+        assertEquals(4, deckColumnCount(availableWidthDp = 312f, portraitWidthDp = 312f))
+        assertEquals(4, deckColumnCount(availableWidthDp = 792f, portraitWidthDp = 792f))
+        assertEquals(4, deckColumnCount(availableWidthDp = 0f, portraitWidthDp = 0f))
+    }
+
+    @Test
+    fun deckGainsAColumnInsteadOfStretchingTheKeys() {
+        // A phone with 403dp of grid: 403/4 = 100.75dp keys. Rotated, 910dp nearly
+        // fits 9 of them -> 9 (a hair smaller) rather than 8 stretched to 113dp.
+        assertEquals(4, deckColumnCount(availableWidthDp = 403f, portraitWidthDp = 403f))
+        assertEquals(9, deckColumnCount(availableWidthDp = 910f, portraitWidthDp = 403f))
+        assertEquals(403f / 4f, 910f / 9f, 0.5f)
+    }
+
+    @Test
+    fun deckFitsMoreColumnsOnATabletInLandscape() {
+        // 800x1280 tablet: portrait 4 keys of 198dp; landscape shows 6 of them (7 would
+        // shrink the keys to 181dp, further from the portrait size).
+        assertEquals(6, deckColumnCount(availableWidthDp = 1272f, portraitWidthDp = 792f))
+    }
 }

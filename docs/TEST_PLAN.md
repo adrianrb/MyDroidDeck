@@ -85,6 +85,7 @@ with `server/.venv/bin/pytest`. Server tests use **pytest**; Android tests use
 | A-18 | Configuração > Atualizar (refresh everything) | The menu's **Atualizar** item drops the icon cache and re-fetches the profiles from the server (back to the loading state), resetting arrange mode and the last status; the icon cache bumps a generation counter so every button re-fetches even when its action key did not change | ✅ `DeckIconCacheTest.kt` + device check |
 | A-19 | First run scans the pairing QR | With no token the pairing screen opens the camera by itself (and a **Ler QR code** button re-opens it); a `mydroiddeck://pair?url=…&code=…` payload fills the server URL (normalized) and the code, other QR codes show a clear error and leave the fields alone; entering them by hand still works | ✅ `PairingQrTest.kt` + device check |
 | A-20 | Icons survive a refresh | **Atualizar** clears the icon cache and reloads the profiles, which cancels the fetches still in flight (the deck is swapped for the loading state). A cancelled fetch releases its "already asked" slot, so the next composition re-requests the icon instead of leaving every button on its monogram; a fetch that *finished* (icon or 404) is still cached for the screen; switching servers also drops the icons | ✅ `DeckIconCacheTest.kt` + device check |
+| A-21 | Deck keys keep the portrait size in landscape | The grid is sized by the **short side** of the screen: portrait keeps 4 columns and landscape keeps that same key size, fitting extra columns as the width allows (a 360 dp phone shows 9) instead of stretching the 4 keys; never fewer than 4 columns, so the keys are the same size in both orientations | ✅ `DeckStateTest.kt` + device check |
 
 ## End-to-end
 | ID | Case | Expected |
@@ -150,7 +151,7 @@ Run with app **0.4.0** against server **0.4.0** (HTTPS), driving the app through
 | Standard actions, one by one (tap → status → Windows process → closed after ~10 s) | `bloco.notas`→Notepad ✅, `calc`→Calculator ✅, `gerenciador.tarefas`→Taskmgr ✅ (elevated: not closable via adb), `kitty`→kiTTY ✅, `explorer`→new window ✅ (closed via COM), `paint`→Paint ✅, `obs.gravar`→"Falha ao enviar" ✅ (OBS not installed), `script.exemplo`→"Falha ao enviar" ✅ (`C:\scripts\exemplo.bat` missing) |
 | Button icons | 6 of the 8 actions serve a real PNG (`GET /icon` → 200); the 2 without are exactly the missing programs (404 → label only) |
 | Monkey (seeds 1, 42, 987654 × 400 events, throttle 150 ms) | 1200 events, **0 crashes / 0 ANR**, app pid stable; 29 real dispatches (random taps do launch programs) |
-| Rotation (landscape ⇄ portrait) | Deck re-renders, same state, 0 crashes |
+| Rotation (landscape ⇄ portrait) | Deck re-renders, same state, 0 crashes. Keys keep their size (A-21): measured via `uiautomator dump` on this 1080x2400 / 400dpi device — portrait 4 columns of 255 px, landscape (2400x1080) 9 columns of 260 px, the key itself 229 px → 234 px (+2%, the column rounding) |
 | Server unreachable → restart | Error state + "Tentar de novo"; retry loads the deck (A-04/A-05) |
 | Revoked token (401) | App clears the token and returns to pairing; re-pairing in the UI restores the deck (E-03) |
 | 10 rapid taps on one button | 10 dispatches, 0 crashes, last status correct |
