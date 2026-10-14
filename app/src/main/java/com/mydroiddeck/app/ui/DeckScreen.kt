@@ -14,12 +14,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -139,7 +142,14 @@ fun DeckScreen(
         }
     }
 
-    Column(modifier = modifier.fillMaxSize().padding(8.dp)) {
+    // The window is edge-to-edge (MainActivity), so keep the header, the grid and the
+    // status line clear of the status/navigation bars and the camera cutout.
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .padding(8.dp),
+    ) {
         when {
             loading -> LoadingState()
             failed -> ErrorState(
@@ -148,16 +158,14 @@ fun DeckScreen(
             )
             profiles.isEmpty() -> MessageState(stringResource(R.string.deck_empty))
             else -> {
-                // The keys are sized by the screen's short side, so a landscape deck
-                // gains columns instead of stretching the four portrait keys.
+                // The keys keep the portrait size (the screen's smallest width, stable
+                // across rotations) and the deck gains columns as the current, insets-safe
+                // width allows — so landscape never stretches or shrinks the keys.
                 val configuration = LocalConfiguration.current
                 val padding = GRID_PADDING.value * 2
                 val columns = deckColumnCount(
                     availableWidthDp = configuration.screenWidthDp - padding,
-                    portraitWidthDp = minOf(
-                        configuration.screenWidthDp,
-                        configuration.screenHeightDp,
-                    ) - padding,
+                    portraitWidthDp = configuration.smallestScreenWidthDp - padding,
                 )
                 // Resolved by name so a rotation or a reload keeps the user's profile.
                 val selected = profileIndexByName(profiles, selectedName)

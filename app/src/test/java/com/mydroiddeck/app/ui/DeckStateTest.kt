@@ -91,6 +91,15 @@ class DeckStateTest {
     }
 
     @Test
+    fun deckKeysKeepThePortraitSizeInAnInsetSafeLandscape() {
+        // 432dp phone: the smallest width (432dp, the stable portrait reference) gives
+        // 4 keys of ~106dp. In landscape the safe width (868dp on this device, already
+        // clear of the cutout/nav bar) fits 8 of the same keys instead of squeezing 9.
+        assertEquals(4, deckColumnCount(availableWidthDp = 424f, portraitWidthDp = 424f))
+        assertEquals(8, deckColumnCount(availableWidthDp = 860f, portraitWidthDp = 424f))
+    }
+
+    @Test
     fun deckShowsFourColumnsOnANarrowOrSquareScreen() {
         assertEquals(4, deckColumnCount(availableWidthDp = 312f, portraitWidthDp = 312f))
         assertEquals(4, deckColumnCount(availableWidthDp = 792f, portraitWidthDp = 792f))
