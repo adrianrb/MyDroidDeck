@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import com.mydroiddeck.app.net.ApiClient
+import kotlinx.coroutines.CancellationException
 
 /**
  * In-memory cache of the buttons' icons, served by the server as one PNG per action.
@@ -58,14 +59,28 @@ class DeckIconCache(
         LaunchedEffect(action, generation) { load(action) }
     }
 
-    /** Fetches [action] once and stores the outcome (the PNG, or `null` on failure). */
+    /**
+     * Fetches the icon once and stores the outcome: the PNG, or `null` when the
+     * server has none (404 — unbound action, or a program without an icon), so a
+     * missing icon is not re-requested on every recomposition.
+     *
+     * A *cancelled* fetch, however, is **not** remembered: the button left the
+     * composition (the grid scrolled it away, or "Atualizar" swapped in the
+     * loading state) and its `LaunchedEffect` was cancelled mid-request, so the
+     * slot is released for the next composition to retry. Without that, the
+     * aborted attempt would still count as "already asked" and every button
+     * would keep its monogram until the app restarted.
+     */
     internal suspend fun load(action: String) {
         if (!requested.add(action)) return
-        icons[action] = try {
-            fetch(action)
+        try {
+            icons[action] = fetch(action)
+        } catch (cancelled: CancellationException) {
+            requested.remove(action)
+            throw cancelled
         } catch (_: Exception) {
             // 404 (no icon), offline, or token revoked: the button keeps its label.
-            null
+            icons[action] = null
         }
     }
 }

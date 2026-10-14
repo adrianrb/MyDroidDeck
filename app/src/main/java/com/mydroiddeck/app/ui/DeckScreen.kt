@@ -274,8 +274,10 @@ fun DeckScreen(
             onDismiss = { showServerDialog = false },
             onConfirm = { url ->
                 // Rebuilds the Retrofit client (ApiClient watches TokenStore) and
-                // reloads. A different server will usually 401 -> re-pair.
+                // reloads. A different server will usually 401 -> re-pair. The
+                // icons also belong to that server, so drop them.
                 TokenStore.baseUrl = url
+                icons.clear()
                 showServerDialog = false
                 reloads++
             },

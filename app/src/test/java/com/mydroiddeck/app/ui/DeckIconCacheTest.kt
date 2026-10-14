@@ -1,5 +1,9 @@
 package com.mydroiddeck.app.ui
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -65,6 +69,32 @@ class DeckIconCacheTest {
 
         assertNull(cache.bytes("calc"))
         cache.load("calc")
+        assertArrayEquals(png, cache.bytes("calc"))
+        assertEquals(2, calls)
+    }
+
+    @Test
+    fun aCancelledFetchIsFetchedAgainByTheNextComposition() = runBlocking {
+        // Regression: "Atualizar" clears the cache and swaps the deck for the
+        // loading state, which cancels the in-flight fetch. That aborted attempt
+        // must not count as "already asked", otherwise every button stays on its
+        // monogram because the icon is never requested again.
+        var calls = 0
+        val cache = DeckIconCache {
+            calls++
+            if (calls == 1) CompletableDeferred<ByteArray?>().await() else png
+        }
+
+        val attempt = launch { cache.load("calc") }
+        while (calls == 0) delay(1) // let the first fetch reach the network call
+        attempt.cancelAndJoin()
+
+        assertNull(cache.bytes("calc"))
+        assertEquals(1, calls)
+
+        // The next composition (the deck returning after the reload) retries.
+        cache.load("calc")
+
         assertArrayEquals(png, cache.bytes("calc"))
         assertEquals(2, calls)
     }
